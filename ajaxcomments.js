@@ -40,7 +40,7 @@ $(document).ready( function() {
 	}
 
 	// If WebSocket is available, connect it and set updating to occur when notified
-	if(poll == 0 && 'webSocket' in window) {
+	if('webSocket' in window) {
 		ws = webSocket.connect();
 		webSocket.subscribe('updateComments', updateComments);
 	}
