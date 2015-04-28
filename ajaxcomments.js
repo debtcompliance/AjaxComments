@@ -1,4 +1,8 @@
-var ws = false; // Whether WebSocket is available
+// Whether WebSocket is available
+var ws = false;
+
+// A name for our event that is specific to this article on this wiki
+var wsAjaxCommentsEvent = mw.config.get('wsWikiID') + mw.config.get('wgArticleId') + ':UpdateComments';
 
 $(document).ready( function() {
 	var poll = mw.config.get('wgAjaxCommentsPollServer');
@@ -42,7 +46,7 @@ $(document).ready( function() {
 	// If WebSocket is available, connect it and set updating to occur when notified
 	if('webSocket' in window) {
 		ws = webSocket.connect();
-		webSocket.subscribe('updateComments', updateComments);
+		webSocket.subscribe(wsAjaxCommentsEvent, updateComments);
 	}
 
 	// If server polling is enabled and no websocket, set up a regular ajax request
@@ -97,7 +101,7 @@ window.ajaxcomment_del = function(id) {
 			dataType: 'html',
 			success: function(html) {
 				this.replaceWith(html);
-				if(ws) webSocket.send('updateComments');
+				if(ws) webSocket.send(wsAjaxCommentsEvent);
 			}
 		});
 		$(this).dialog('close');
@@ -131,7 +135,7 @@ window.ajaxcomment_source = function(id, target) {
 		success: function(json) {
 			this.val(json.text);
 			this.attr('disabled',false);
-			if(ws) webSocket.send('updateComments');
+			if(ws) webSocket.send(wsAjaxCommentsEvent);
 		}
 	});
 };
@@ -160,7 +164,7 @@ window.ajaxcomment_like = function(id, val) {
 			if(html) {
 				$('#ajaxcomment-like',this).first().remove();
 				$('#ajaxcomment-dislike',this).first().replaceWith(html);
-				if(ws) webSocket.send('updateComments');
+				if(ws) webSocket.send(wsAjaxCommentsEvent);
 			}
 		}
 	});
@@ -239,7 +243,7 @@ window.ajaxcomment_submit = function(e, cmd) {
 		success: function(html) {
 			this.replaceWith(html);
 			ajaxcomment_cancel();
-			if(ws) webSocket.send('updateComments');
+			if(ws) webSocket.send(wsAjaxCommentsEvent);
 		}
 	});
 };
