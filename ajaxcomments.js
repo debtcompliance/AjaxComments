@@ -30,7 +30,7 @@ $(document).ready( function() {
 		});
 	}
 
-	// Ask the server for the rendered comments if they've changed
+	// Ask the server for the rendered comments on a regular intervale (unless WebSocket connected)
 	function updateComments() {
 		$.ajax({
 			type: 'GET',
@@ -40,18 +40,17 @@ $(document).ready( function() {
 			success: function(html) {
 				if(html) $('#ajaxcomments').html(html);
 			}
+		}).then(function() {
+			if(!('webSocket' in window && window.webSocket.connected())) setTimeout(updateComments, poll * 1000);
 		});
 	}
 
 	// If WebSocket is available, connect it and set updating to occur when notified
+	updateComments();
 	if('webSocket' in window) {
 		ws = webSocket.connect();
+		webSocket.disconnected(updateComments);
 		webSocket.subscribe(wsAjaxCommentsEvent, updateComments);
-	}
-
-	// If server polling is enabled and no websocket, set up a regular ajax request
-	if(poll > 0 && !('webSocket' in window && window.webSocket.active())) {
-		setInterval(updateComments, poll * 1000);
 	}
 });
 
