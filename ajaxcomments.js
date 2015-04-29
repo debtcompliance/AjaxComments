@@ -41,7 +41,7 @@ $(document).ready( function() {
 				if(html) $('#ajaxcomments').html(html);
 			}
 		}).then(function() {
-			if(!('webSocket' in window && window.webSocket.connected())) setTimeout(updateComments, poll * 1000);
+			if(!('webSocket' in window && webSocket.connected())) setTimeout(updateComments, poll * 1000);
 		});
 	}
 
