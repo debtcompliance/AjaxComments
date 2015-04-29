@@ -41,13 +41,13 @@ $(document).ready( function() {
 				if(html) $('#ajaxcomments').html(html);
 			}
 		}).then(function() {
-			if(!('webSocket' in window && webSocket.connected())) setTimeout(updateComments, poll * 1000);
+			if(!(typeof webSocket === 'object' && webSocket.connected())) setTimeout(updateComments, poll * 1000);
 		});
 	}
 
 	// If WebSocket is available, connect it and set updating to occur when notified
 	updateComments();
-	if('webSocket' in window) {
+	if(typeof webSocket === 'object') {
 		ws = webSocket.connect();
 		webSocket.disconnected(updateComments);
 		webSocket.subscribe(wsAjaxCommentsEvent, updateComments);
