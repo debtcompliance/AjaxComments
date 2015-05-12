@@ -7,22 +7,23 @@
  * @author Aran Dunkley [http://www.organicdesign.co.nz/nad User:Nad]
  * @copyright © 2012-2015 Aran Dunkley
  * @licence GNU General Public Licence 2.0 or later
+ * 
+ * Version 2.0 (started on 2015-05-01) stores comments in the DB and leaves the talk page alone, comment rendering is done via JS
+ * 
  */
 if( !defined( 'MEDIAWIKI' ) ) die( 'Not an entry point.' );
 
-define( 'AJAXCOMMENTS_VERSION', '1.3.2, 2015-04-29' );
-define( 'AJAXCOMMENTS_USER', 1 );
-define( 'AJAXCOMMENTS_DATE', 2 );
-define( 'AJAXCOMMENTS_TEXT', 3 );
-define( 'AJAXCOMMENTS_PARENT', 4 );
-define( 'AJAXCOMMENTS_REPLIES', 5 );
-define( 'AJAXCOMMENTS_LIKE', 6 );
+define( 'AJAXCOMMENTS_VERSION', '2.0.0, 2015-05-01' );
+define( 'AJAXCOMMENTS_TABLE', 'ajaxcomments' );
+define( 'AJAXCOMMENTS_DATATYPE_COMMENT', 1 );
+define( 'AJAXCOMMENTS_DATATYPE_LIKE', 2 );
 
 $wgAjaxCommentsLikeDislike = true;        // add a like/dislike link to each comment
 $wgAjaxCommentsAvatars = true;            // use the gravatar service for users icons
 $wgAjaxCommentsPollServer = 0;            // poll the server to see if any changes to comments have been made and update if so
 
-$wgExtensionFunctions[] = 'wfSetupAjaxComments';
+$wgAjaxExportList[] = 'AjaxComments::ajax';
+
 $wgExtensionCredits['other'][] = array(
 	'path'        => __FILE__,
 	'name'        => 'AjaxComments',
@@ -36,19 +37,22 @@ $wgExtensionMessagesFiles['AjaxComments'] = __DIR__ . '/AjaxComments.i18n.php';
 
 class AjaxComments {
 
-	var $comments = array();
-	var $changed = false;
-	var $talk = false;
-	var $canComment = false;
+	private $comments = array();
+	private $talk = false;
+	private $canComment = false;
 
 	function __construct() {
-		global $wgHooks, $wgOut, $wgResourceModules, $wgAjaxCommentsPollServer, $wgTitle, $wgExtensionAssetsPath, $wgUser;
+		global $wgExtensionFunctions;
+		$wgExtensionFunctions[] = array( $this, 'setup' );
+	}
 
-		$wgHooks['UnknownAction'][] = $this;
+	public function setup() {
+		global $wgOut, $wgResourceModules, $wgAjaxCommentsPollServer, $wgExtensionAssetsPath, $wgUser;
 
 		// Create a hook to allow external condition for whether there should be comments shown
 		$title = array_key_exists( 'title', $_GET ) ? Title::newFromText( $_GET['title'] ) : false;
-		if( !array_key_exists( 'action', $_REQUEST ) && self::checkTitle( $title ) ) $wgHooks['BeforePageDisplay'][] = $this; else $wgAjaxCommentsPollServer = -1;
+		if( !array_key_exists( 'action', $_REQUEST ) && self::checkTitle( $title ) ) Hooks::register( 'BeforePageDisplay', $this );
+		else $wgAjaxCommentsPollServer = -1;
 
 		// Create a hook to allow external condition for whether comments can be added or replied to (default is just user logged in)
 		$this->canComment = $wgUser->isLoggedIn();
@@ -76,18 +80,23 @@ class AjaxComments {
 			'localBasePath'  => __DIR__,
 			'remoteBasePath' => $path,
 			'messages' => array(
+				'ajaxcomments-add',
+				'ajaxcomments-edit',
+				'ajaxcomments-reply',
+				'ajaxcomments-delete',
+				'ajaxcomments-none',
+				'ajaxcomments-anon',
 				'ajaxcomments-confirmdel',
 				'ajaxcomments-confirm',
 				'ajaxcomments-yes',
 				'ajaxcomments-post',
-				'ajaxcomments-cancel'
+				'ajaxcomments-cancel',
 			),
 		);
 		$wgOut->addModules( 'ext.ajaxcomments' );
 		$wgOut->addStyle( "$path/ajaxcomments.css" );
-
-		// Set polling to -1 if checkTitle says comments are disabled
-		$wgOut->addJsConfigVars( 'wgAjaxCommentsPollServer', $wgAjaxCommentsPollServer );
+		$wgOut->addJsConfigVars( 'ajaxCommentsPollServer', $wgAjaxCommentsPollServer );
+		$wgOut->addJsConfigVars( 'ajaxCommentsCanComment', $this->canComment );
 	}
 
 	/**
@@ -95,7 +104,7 @@ class AjaxComments {
 	 */
 	public static function checkTitle( $title ) {
 		$ret = true;
-		if( !is_object( $title ) ) $title = Title::newFromText( $title );
+		if( $title && !is_object( $title ) ) $title = Title::newFromText( $title );
 		if( !is_object( $title ) || $title->getArticleID() == 0 || $title->isRedirect() || ($title->getNamespace()&1) ) $ret = false;
 		else Hooks::run( 'AjaxCommentsCheckTitle', array( $title, &$ret ) );
 		return $ret;
@@ -104,354 +113,245 @@ class AjaxComments {
 	/**
 	 * Render a name at the end of the page so redirected talk pages can go there before ajax loads the content
 	 */
-	function onBeforePageDisplay( $out, $skin ) {
-		$out->addHtml( "<a id=\"ajaxcomments-name\" name=\"ajaxcomments\"></a>" );
+	public function onBeforePageDisplay( $out, $skin ) {
+		$out->addHtml( '<h2>' . wfMessage( 'ajaxcomments-heading' )->text() . '</h2><a id="ajaxcomments-name" name="ajaxcomments"></a>' );
 		return true;
 	}
 
 	/**
 	 * Process the Ajax requests
-	 * - we're bypassing the Ajax handler because we need the title and parser to be established
-	 * - if "ajaxcommentsinternal" action is passed, all comments are returned directly as html
 	 */
-	function onUnknownAction( $action, $article ) {
-		if( $action == 'ajaxcomments' || $action == 'ajaxcommentsinternal' ) {
-			global $wgOut, $wgRequest;
-			if( $action == 'ajaxcomments' ) $wgOut->disable(); else $this->canComment = false;
-			$talk = $article->getTitle()->getTalkPage();
-			if( is_object( $talk ) ) {
-				if( $action == 'ajaxcomments' ) {
-					$id = $wgRequest->getText( 'id', false );
-					$text = $wgRequest->getText( 'text', false );
-					$ts = $wgRequest->getText( 'ts', '' );
-					$command = $wgRequest->getText( 'cmd' );
-				} else $id = $text = $ts = $command = '';
-				$this->talk = $talk;
-				$article = new Article( $talk );
-				$summary = wfMessage( "ajaxcomments-$command-summary" )->text();
+	public static function ajax( $command, $page, $id = 0, $data  = '' ) {
+		global $wgOut, $wgRequest;
+		header( 'Content-Type: application/json' );
+		$data = array();
 
-				// If the talk page exists, get its content and the timestamp of the latest revision
-				$content = '';
-				if( $talk->exists() ) {
-					$content = $article->getContent();
-					$this->comments = self::textToData( $content );
-					$latest = Revision::newFromTitle( $talk )->getTimestamp();
-				} else $latest = 0;
+		// Perform the command on the talk content
+		switch( $command ) {
 
-				// If a timestamp is provided in the request, bail if nothings happened to the talk content since that time
-				if( is_numeric( $ts ) && $ts > 0 && ( $ts == $latest ) ) return true;
+			case 'add':
+				$data = self::add( $text, $page );
+			break;
 
-				// Perform the command on the talk content
-				switch( $command ) {
+			case 'reply':
+				$data = self::reply( $text, $page, $id );
+			break;
 
-					case 'add':
-						print $this->add( $text );
-					break;
+			case 'edit':
+				$data = self::edit( $text, $page, $id );
+			break;
 
-					case 'reply':
-						print $this->reply( $id, $text );
-					break;
+			case 'del':
+				$data = self::delete( $id ) === true ? array( 'success' => 1 ) : array( 'error' => $data );
+			break;
 
-					case 'edit':
-						print $this->edit( $id, $text );
-					break;
+			case 'like':
+				$data = array( 'message' => self::like( $id, $text ) );
+			break;
 
-					case 'del':
-						print $this->delete( $id );
-						print count( $this->comments ) > 0 ? '' : "<i id=\"ajaxcomments-none\">" . wfMessage( 'ajaxcomments-none' )->text() . "</i>";
-					break;
+			case 'get':
+				$data = self::getComments( $page, $id );
+			break;
 
-					case 'like':
-						if( $summary = $this->like( $id, $text ) ) {
-							print $this->renderComment( $id, true );
-						}
-					break;
-
-					case 'src':
-						header( 'Content-Type: application/json' );
-						$comment = $this->comments[$id];
-						print '{';
-						print '"user":' . json_encode( $comment[AJAXCOMMENTS_USER] );
-						print ',"date":' . json_encode( $comment[AJAXCOMMENTS_DATE] );
-						print ',"text":' . json_encode( $comment[AJAXCOMMENTS_TEXT] );
-						print '}';
-					break;
-
-					// By default return the whole rendered comments area
-					default:
-						$content = '';
-						$n = count( $this->comments );
-						if( $action == 'ajaxcomments' ) {
-							$tsdiv = "<div id=\"ajaxcomment-timestamp\" style=\"display:none\">$latest</div>";
-							$content .= "<h2>" . wfMessage( 'ajaxcomments-heading' )->text() . "</h2><a name=\"ajaxcomments\"></a>$tsdiv\n";
-						}
-						$cc = "<h3 id=\"ajaxcomments-count\">";
-						if( $n == 1 ) $content .= $cc . wfMessage( 'ajaxcomments-comment', $n )->text() . "</h3>\n";
-						else if( $n > 1 ) $content .= $cc . wfMessage( 'ajaxcomments-comments', $n )->text() . "</h3>\n";
-						$content .= $this->renderComments();
-						if( $action == 'ajaxcomments' ) print $content; else return $content;
-				}
-
-				// If any comment data has been changed write it back to the talk article
-				if( $this->changed ) {
-					$flag = $talk->exists() ? EDIT_UPDATE : EDIT_NEW;
-					$article->doEdit( self::dataToText( $this->comments, $content ), $summary, $flag );
-				}
-			}
+			default:
+				$data['error'] = "unknown action";
 		}
 
-		return true;
+		return json_encode( $data );
 	}
 
 	/**
-	 * Add a new comment to the data structure
+	 * Add a new comment to the data structure, return it's insert ID
 	 */
-	function add( $text ) {
+	private static function add( $text, $page ) {
 		global $wgUser;
-		$id = uniqid();
-		$this->comments[$id] = array(
-			AJAXCOMMENTS_PARENT => false,
-			AJAXCOMMENTS_USER => $wgUser->getName(),
-			AJAXCOMMENTS_DATE => time(),
-			AJAXCOMMENTS_TEXT => $text,
-			AJAXCOMMENTS_REPLIES => array()
-		);
-		$this->changed = true;
-		return $this->renderComment( $id );
+		$dbw = wfGetDB( DB_MASTER );
+		$dbw->insert( AJAXCOMMENTS_TABLE, array(
+			'ac_type' => AJAXCOMMENTS_DATATYPE_COMMENT,
+			'ac_user' => $wgUser->getId(),
+			'ac_page' => $page,
+			'ac_time' => time(),
+			'ac_data' => $text,
+		) );
+		return $dbw->insertId();
 	}
 
 	/**
 	 * Edit an existing comment in the data structure
 	 */
-	function edit( $id, $text ) {
-		global $wgParser;
-		$this->comments[$id][AJAXCOMMENTS_TEXT] = $text;
-		$html = $wgParser->parse( $text, $this->talk, new ParserOptions(), true, true )->getText();
-		$this->changed = true;
-		return "<div class=\"ajaxcomment-text\">$html</div>";
+	private static function edit( $id, $text ) {
+		$dbw = wfGetDB( DB_MASTER );
+		$dbw->update( AJAXCOMMENTS_TABLE, array( 'ac_data' => $text ), array( 'ac_id' => $id ) );
 	}
 
 	/**
 	 * Add a new comment as a reply to an existing comment in the data structure
+	 * - return the new comment in client-ready format
 	 */
-	function reply( $parent, $text ) {
+	private static function reply( $text, $page, $parent ) {
 		global $wgUser;
-		$id = uniqid();
-		array_unshift( $this->comments[$parent][AJAXCOMMENTS_REPLIES], $id );
-		$this->comments[$id] = array(
-			AJAXCOMMENTS_PARENT => $parent,
-			AJAXCOMMENTS_USER => $wgUser->getName(),
-			AJAXCOMMENTS_DATE => time(),
-			AJAXCOMMENTS_TEXT => $text,
-			AJAXCOMMENTS_REPLIES => array()
+		$uid = $wgUser->getId();
+		$ts = time();
+		$dbw = wfGetDB( DB_MASTER );
+		$row = array(
+			'ac_type'   => AJAXCOMMENTS_DATATYPE_COMMENT,
+			'ac_parent' => $parent,
+			'ac_page'   => $page,
+			'ac_user'   => $uid,
+			'ac_time'   => $ts,
+			'ac_data'   => $text,
 		);
-		$this->changed = true;
-		return $this->renderComment( $id );
+		$dbw->insert( AJAXCOMMENTS_TABLE, $row );
+		return getComment( $row );
 	}
 
 	/**
 	 * Delete a comment amd all its replies from the data structure
 	 */
-	function delete( $id ) {
-		if( array_key_exists( $id, $this->comments ) ) {
+	private static function delete( $id ) {
+		$dbw = wfGetDB( DB_MASTER );
 
-			// Call delete for all the replies of this comment
-			foreach( $this->comments[$id][AJAXCOMMENTS_REPLIES] as $child ) $this->delete( $child );
-
-			// Remove this item from the parents replies list (unless root level)
-			if( $parent = $this->comments[$id][AJAXCOMMENTS_PARENT] ) {
-				$i = array_search( $id, $this->comments[$parent][AJAXCOMMENTS_REPLIES] );
-				if( $i !== false ) unset( $this->comments[$parent][AJAXCOMMENTS_REPLIES][$i] );
-			}
-
-			// Remove this comment from the data
-			unset( $this->comments[$id] );
-
-			// If there are no comments now, delete the page
-			if( count( $this->comments ) == 0 ) {
-				$article = new Article( $this->talk );
-				$article->doDelete( wfMessage( 'ajaxcomments-talkdeleted' )->text() );
-			}
-
-			// Otherwise mark the article is changed so it gets updated
-			else $this->changed = true;
+		// Die if the comment is not owned by this user unless sysop
+		if( !in_array( 'sysop', $wgUser->getEffectiveGroups() ) ) {
+			$row = $dbw->selectRow( AJAXCOMMENTS_TABLE, 'ac_user', array( 'ac_id' => $id ) );
+			if( $uid->ac_user != $wgUser->getId() ) return "Only sysops can delete someone else's comment";
 		}
+
+		// Delete this comment and all child comments and likes
+		$children = self::getChildren( $id, $id );
+		$children = implode( ',', $children );
+		return $dbw->delete( AJAXCOMMENTS_TABLE, "ac_id IN ($children)" );
 	}
 
 	/**
 	 * Like/unlike a comment returning a message describing the change
-	 * - if val isn't passed, then the current like state of the current user and the total likes/dislikes are returned
 	 */
-	function like( $id, $val = false ) {
+	private static function like( $id, $val ) {
 		global $wgUser;
+		$dbw = wfGetDB( DB_MASTER );
+		$row = $dbw->selectRow( AJAXCOMMENTS_TABLE, 'ac_user', array( 'ac_id' => $id ) );
+		$uid = $wgUser->getId();
 		$name = $wgUser->getName();
-		$cname = $this->comments[$id][AJAXCOMMENTS_USER];
-		if( !array_key_exists( AJAXCOMMENTS_LIKE, $this->comments[$id] ) ) $this->comments[$id][AJAXCOMMENTS_LIKE] = array();
-		$like = array_key_exists( $name, $this->comments[$id][AJAXCOMMENTS_LIKE] ) ? $this->comments[$id][AJAXCOMMENTS_LIKE][$name] : 0;
+		$cname = User::newFromId( $row->ac_user )->getName();
 
-		// If a +1/-1 values was passed, update the like state now returing a description message
-		if( $val ) {
-			$this->changed = true;
+		// Get this users like value for this comment if any
+		$row = $dbw->selectRow( AJAXCOMMENTS_TABLE, 'ac_data, ac_id', array(
+			'ac_type'   => AJAXCOMMENTS_DATATYPE_LIKE,
+			'ac_parent' => $id,
+			'ac_user'   => $uid
+		) );
+		$like = $row ? $row->ac_page : 0;
+		$lid = $row ? $row->ac_id : 0;
 
-			// Remove the user if they now nolonger like or dislike, otherwise update their value
-			if( $like + $val == 0 ) unset( $this->comments[$id][AJAXCOMMENTS_LIKE][$name] );
-			else $this->comments[$id][AJAXCOMMENTS_LIKE][$name] = $like + $val;
+		// Remove the user if they now nolonger like or dislike, otherwise update their value
+		if( $like + $val == 0 ) $dbw->delete( AJAXCOMMENTS_TABLE, array( 'ac_id' => $lid ) );
+		else $dbw->update( AJAXCOMMENTS_TABLE, array( 'ac_data' => $like + $val ), array( 'ac_id' => $lid ) );
 
-			if( $val > 0 ) {
-				if( $like < 0 ) return wfMessage( 'ajaxcomments-undislike', $name, $cname )->text();
-				else return wfMessage( 'ajaxcomments-like', $name, $cname )->text();
-			}
-			else {
-				if( $like > 0 ) return wfMessage( 'ajaxcomments-unlike', $name, $cname )->text();
-				else return wfMessage( 'ajaxcomments-dislike', $name, $cname )->text();
-			}
+		// Return a message string about the update
+		if( $val > 0 ) {
+			if( $like < 0 ) return wfMessage( 'ajaxcomments-undislike', $name, $cname )->text();
+			else return wfMessage( 'ajaxcomments-like', $name, $cname )->text();
+		} else {
+			if( $like > 0 ) return wfMessage( 'ajaxcomments-unlike', $name, $cname )->text();
+			else return wfMessage( 'ajaxcomments-dislike', $name, $cname )->text();
 		}
+	}
 
-		// No value was passed, add up the likes and dislikes
+	/**
+	 * Get all child comments and likes of the passed id (i.e. replies and replies of replies etc)
+	 */
+	private static function getChildren( $id, $children = array() ) {
+		$dbr = wfGetDB( DB_SLAVE );
+		$res = $dbr->select( AJAXCOMMENTS_TABLE, 'ac_id', array( 'ac_parent' => $id ) );
+		foreach( $res as $row ) $children = $this->children( $row->ac_id, $children );
+		return $children;
+	}
+
+	/**
+	 * Return the passed comment in client-ready format
+	 * - row can be a comment id or a db row structure
+	 */
+	private static function getComment( $row ) {
 		$likes = $dislikes = array();
-		foreach( $this->comments[$id][AJAXCOMMENTS_LIKE] as $k => $v ) if( $v > 0 ) $likes[] = $k; else $dislikes[] = $k;
-		return array( $like, $likes, $dislikes );
+
+		// Read the row from DB if id supplied
+		if( is_numeric( $row ) ) {
+			$id = $row;
+			$dbr = wfGetDB( DB_SLAVE );
+			$row = $dbr->selectRow( AJAXCOMMENTS_TABLE, '*', array( 'ac_id' => $id ) );
+
+			// Get the like data for this comment
+			if( $row->ac_type == AJAXCOMMENTS_DATATYPE_COMMENT ) {
+				$res = $dbw->select(
+					AJAXCOMMENTS_TABLE,
+					'ac_user,ac_data',
+					array( 'ac_type' => AJAXCOMMENTS_DATATYPE_LIKE, 'ac_parent' => $id ),
+					__METHOD__,
+					array( 'ORDER BY' => 'ac_time' )
+				);
+				foreach( $res as $row ) {
+					$name = User::newFromId( $row->ac_user )->getName();
+					$row->ac_data > 0 ? $likes[] = $name : $dislikes[] = $name;
+				}
+			}
+		}
+
+		// Convert to client-ready format
+		return array(
+			'id'      => $row->ac_id,
+			'parent'  => $row->ac_parent,
+			'user'    => $row->ac_user,
+			'name'    => User::newFromId( $row->ac_user )->getName(),
+			'time'    => $row->ac_time,
+			'data'    => $row->ac_data,
+			'html'    => self::parse( $row->ac_data, $row->ac_page ),
+			'like'    => $likes,
+			'dislike' => $dislikes,
+		);
 	}
 
 	/**
-	 * Render the comment data structure as HTML
-	 * - also render a no comments message if none
-	 * - and an add comments link at the top
+	 * Get comments for passed page greater than passed timestamp in a client-ready format
 	 */
-	function renderComments() {
+	private static function getComments( $page, $ts = false ) {
+
+		// Query DB for all comments and likes for the page (after ts if supplied)
+		$cond = array( 'ac_page' => $page );
+		if( $ts ) $cond[] = "ac_time > $ts";
+		$dbr = wfGetDB( DB_SLAVE );
+		$res = $dbr->select(
+			AJAXCOMMENTS_TABLE,
+			'*',
+			$cond,
+			__METHOD__,
+			array( 'ORDER BY' => 'ac_time' )
+		);
+
+		// Get rows changing user id's to names and separating into lists of comments and likes
+		$comments = $likes = array();
+		foreach( $res as $row ) {
+			$item = self::getComment( $row );
+			$row->ac_type == AJAXCOMMENTS_DATATYPE_COMMENT ? $comments[] = $item : $likes[] = $item;
+		}
+
+		// Put the like data into the associated comment data
+		foreach( $likes as $id => $item ) {
+			$item['data'] > 0 ? $comments[$item['parent']]['like'][] = $item['name'] : $comments[$item['parent']]['dislike'][] = $item['name'];
+		}
+
+		return $comments;
+	}
+
+	/**
+	 * Parse wikitext
+	 */
+	private static function parse( $text, $page ) {
 		global $wgUser;
-		$html = '';
-		foreach( $this->comments as $id => $comment ) {
-			if( $comment[AJAXCOMMENTS_PARENT] === false ) $html = $this->renderComment( $id ) . $html;
-		}
-		if( $html == '' ) $html = "<i id=\"ajaxcomments-none\">" . wfMessage( 'ajaxcomments-none' )->text() . "</i><br />";
-
-		// If logged in, allow replies and editing etc
-		if( $this->canComment ) {
-			$html = "<ul class=\"ajaxcomment-links\">" .
-				"<li id=\"ajaxcomment-add\"><a href=\"javascript:ajaxcomment_add()\">" . wfMessage( 'ajaxcomments-add' )->text() . "</a></li>\n" .
-				"</ul>\n$html";
-		} else $html = "<i id=\"ajaxcomments-none\">" . wfMessage( 'ajaxcomments-anon' )->text() . "</i><br />$html";
-		return $html;
+		$title = Title::newFromId( $page );
+		$parser = new Parser;
+		$options = ParserOptions::newFromUser( $wgUser );
+		return $parser->parse( $text, $title, $options, true, true )->getText();
 	}
-
-	/**
-	 * Render a single comment and any of it's replies
-	 * - this is recursive - it will render any replies which could in turn contain replies etc
-	 * - renders edit/delete link if sysop, or no replies and current user is owner
-	 * - if likeonly is set, return only the like/dislike links
-	 */
-	function renderComment( $id, $likeonly = false ) {
-		global $wgParser, $wgUser, $wgLang, $wgAjaxCommentsAvatars, $wgAjaxCommentsLikeDislike;
-		$curName = $wgUser->getName();
-		$c = $this->comments[$id];
-		$html = '';
-
-		// Render replies
-		$r = '';
-		foreach( $c[AJAXCOMMENTS_REPLIES] as $child ) $r .= $this->renderComment( $child );
-
-		// Get total likes and unlikes
-		$likelink = $dislikelink = '';
-		list( $like, $likes, $dislikes ) = $this->like( $id );
-
-		// Render user name as link
-		$name = $c[AJAXCOMMENTS_USER];
-		$user = User::newFromName( $name );
-		$url = $user->getUserPage()->getLocalUrl();
-		$ulink = "<a href=\"$url\">$name</a>";
-
-		// Get the user's gravitar url
-		if( $wgAjaxCommentsAvatars && $user->isEmailConfirmed() ) {
-			$email = $user->getEmail();
-			$grav = "http://www.gravatar.com/avatar/" . md5( strtolower( $email ) ) . "?s=50&d=wavatar";
-			$grav = "<img src=\"$grav\" alt=\"$name\" />";
-		} else $grav = '';
-
-		if( !$likeonly ) $html .= "<div class=\"ajaxcomment\" id=\"ajaxcomments-$id\">\n" .
-			"<div class=\"ajaxcomment-sig\">" .
-				wfMessage( 'ajaxcomments-sig', $ulink, $wgLang->timeanddate( $c[AJAXCOMMENTS_DATE], true ) )->text() .
-			"</div>\n<div class=\"ajaxcomment-icon\">$grav</div><div class=\"ajaxcomment-text\">" .
-				$wgParser->parse( $c[AJAXCOMMENTS_TEXT], $this->talk, new ParserOptions(), true, true )->getText() .
-			"</div>\n<ul class=\"ajaxcomment-links\">";
-
-		// If logged in, allow replies and editing etc
-		if( $this->canComment ) {
-
-			if( !$likeonly ) {
-
-				// Reply link
-				$html .= "<li id=\"ajaxcomment-reply\"><a href=\"javascript:ajaxcomment_reply('$id')\">" . wfMessage( 'ajaxcomments-reply' )->text() . "</a></li>\n";
-
-				// If sysop, or no replies and current user is owner, add edit/del links
-				if( in_array( 'sysop', $wgUser->getEffectiveGroups() ) || ( $curName == $c[AJAXCOMMENTS_USER] && $r == '' ) ) {
-					$html .= "<li id=\"ajaxcomment-edit\"><a href=\"javascript:ajaxcomment_edit('$id')\">" . wfMessage( 'ajaxcomments-edit' )->text() . "</a></li>\n";
-					$html .= "<li id=\"ajaxcomment-del\"><a href=\"javascript:ajaxcomment_del('$id')\">" . wfMessage( 'ajaxcomments-del' )->text() . "</a></li>\n";
-				}
-			}
-
-			// Make the like/dislike links
-			if( $wgAjaxCommentsLikeDislike ) {
-				if( $curName != $name ) {
-					if( $like <= 0 ) $likelink = " onclick=\"javascript:ajaxcomment_like('$id',1)\" class=\"ajaxcomment-active\"";
-					if( $like >= 0 ) $dislikelink = " onclick=\"javascript:ajaxcomment_like('$id',-1)\" class=\"ajaxcomment-active\"";
-				}
-
-				// Add the likes and dislikes links
-				$clikes = count( $likes );
-				$cdislikes = count( $dislikes );
-				$likes = $this->formatNameList( $likes, 'like' );
-				$dislikes = $this->formatNameList( $dislikes, 'dislike' );
-				$html .= "<li title=\"$likes\" id=\"ajaxcomment-like\"$likelink>$clikes</li>\n";
-				$html .= "<li title=\"$dislikes\" id=\"ajaxcomment-dislike\"$dislikelink>$cdislikes</li>\n";
-			}
-		}
-
-		if( !$likeonly ) $html .= "</ul>$r</div>\n";
-		return $html;
-	}
-
-	/**
-	 * Return the passed list of names as a list of "a,b,c and d"
-	 */
-	function formatNameList( $list, $msg ) {
-		$len = count( $list );
-		if( $len < 1 ) return wfMessage( "ajaxcomments-no$msg" )->text();
-		if( $len == 1 ) return wfMessage( "ajaxcomments-one$msg", $list[0] )->text();
-		$last = array_pop( $list );
-		return wfMessage( "ajaxcomments-many$msg", join( ', ', $list ), $last )->text();
-	}
-
-	/**
-	 * Return the passed talk text as a data structure of comments
-	 * - detect if the content needs to be base64 decoded before unserialising
-	 */
-	static function textToData( $text ) {
-		if( preg_match( "|== AjaxComments:DataStart ==\s*(.+?)\s*== AjaxComments:DataEnd ==|s", $text, $m ) ) {
-			$data = $m[1];
-			if( substr( $data, -1 ) != '}' ) $data = base64_decode( $data );
-			return unserialize( $data );
-		}
-		return array();
-	}
-
-	/**
-	 * Return the passed data structure of comments as text for a talk page
-	 * - $content is the current talk page text to integrate with
-	 */
-	static function dataToText( $data, $content ) {
-		$text = base64_encode( serialize( $data ) );
-		$text = "\n== AjaxComments:DataStart ==\n$text\n== AjaxComments:DataEnd ==";
-		$content = preg_replace( "|\s*== AjaxComments:DataStart ==\s*(.+)\s*== AjaxComments:DataEnd ==|s", $text, $content, 1, $count );
-		if( $count == 0 ) $content .= $text;
-		return $content;
-	}
-
 }
 
-// $wgAjaxComments can be set to false prior to extension setup to disable comments on this page
-function wfSetupAjaxComments() {
-	global $wgAjaxComments;
-	$wgAjaxComments = new AjaxComments();
-}
-
+new AjaxComments();
