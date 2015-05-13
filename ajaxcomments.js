@@ -7,6 +7,11 @@ $(document).ready( function() {
 	// Remember ID of this page for ajax requests
 	var page = mw.config.get('wgArticleId');
 
+	// User info
+	var user = mw.config.get('wgUserId');
+	var groups = mw.config.get('wgUserGroups');
+	var sysop = $.inArray( 'sysop', groups );
+
 	// Is the user allowed to add comments/edit etc?
 	var canComment = mw.config.get('ajaxCommentsCanComment');
 
@@ -31,7 +36,7 @@ $(document).ready( function() {
 		$('#ca-talk').removeClass('new');
 
 		// Create a target for the comments and put a loader in it
-		$('#ajaxcomments-name').after('<div id="ajaxcomments" class="ajaxcomments-loader"></div>');
+		$('#ajaxcomments-name').after('<div id="ajaxcomments-wrapper"><div id="ajaxcomments" class="ajaxcomments-loader"></div></div>');
 	}
 
 	// If WebSocket is available, connect it and set updating to occur when notified
@@ -63,7 +68,7 @@ $(document).ready( function() {
 	 * An add link has been clicked
 	 */
 	function add() {
-		ajaxcomment_textinput($('#ajaxcomment-add').parent(), 'add');
+		input('add');
 		$('#ajaxcomments-none').remove();
 	}
 
@@ -71,9 +76,8 @@ $(document).ready( function() {
 	 * An edit link has been clicked
 	 */
 	function edit(id) {
-		var e = $('#ajaxcomments-' + id + ' .ajaxcomment-text').first();
-		ajaxcomment_textinput(e, 'edit');
-		ajaxcomment_source( id, $('textarea', e.parent()).first() );
+		input('edit', id);
+		source(id);
 		e.hide();
 	}
 
@@ -81,14 +85,14 @@ $(document).ready( function() {
 	 * A reply link has been clicked
 	 */
 	function reply(id) {
-		ajaxcomment_textinput($('#ajaxcomments-' + id + ' .ajaxcomment-links').first(), 'reply');
+		input('reply', id);
 	}
 
 	/**
 	 * An delete link has been clicked
 	 */
 	function del(id) {
-		var target = $('#ajaxcomments-' + id);
+		var target = $('#ajaxcomment-' + id);
 		var buttons = {};
 		buttons[mw.message( 'ajaxcomments-yes' ).escaped()] = function() {
 			target.html('<div class="ajaxcomments-loader"></div>');
@@ -121,30 +125,6 @@ $(document).ready( function() {
 	}
 
 	/**
-	 * Disable the passed input box, retrieve the wikitext source via ajax, then populate and enable the input
-	 */
-	function source(id, target) {
-		target.attr('disabled',true);
-		$.ajax({
-			type: 'GET',
-			url: mw.util.wikiScript(),
-			data: {
-				action: 'ajaxcomments',
-				title: mw.config.get('wgPageName'),
-				cmd: 'src',
-				id: id,
-			},
-			context: target,
-			dataType: 'json',
-			success: function(json) {
-				this.val(json.text);
-				this.attr('disabled',false);
-				if(ws) webSocket.send(wsAjaxCommentsEvent);
-			}
-		});
-	}
-
-	/**
 	 * Send a request to like/dislike an item
 	 * - the returned response is the new like/dislike links
 	 */
@@ -172,23 +152,50 @@ $(document).ready( function() {
 	}
 
 	/**
-	 * Open a comment input box at the passed element location
+	 * Open a comment input box for the passed commend (or new if null)
 	 */
-	function textInput(e, cmd) {
-		ajaxcomment_cancel();
-		var html = '<div id="ajaxcomment-input" class="ajaxcomment-input-' + cmd + '"><textarea></textarea><br />';
-		html += '<input type="button" onclick="ajaxcomment_submit(this,\'' + cmd + '\')" value="' + mw.message('ajaxcomments-post').escaped() + '" />';
-		html += '<input type="button" onclick="ajaxcomment_cancel()" value="' + mw.message('ajaxcomments-cancel').escaped() + '" />';
+	function input(type, id) {
+		var sel, html;
+		if(id === undefined) id = 'new';
+		sel = '#ajaxcomment-' + id;
+
+		// Cancel any existing inputs
+		cancel();
+
+		// Build the input with it's submit and cancel buttons
+		var html = '<div id="ajaxcomment-input" class="ajaxcomment-input ' + type + '"><textarea></textarea>';
+		html += '<button class="submit">' + mw.message('ajaxcomments-post').text() + '</button>';
+		html += '<button class="cancel">' + mw.message('ajaxcomments-cancel').text() + '</button>';
 		html += '</div>';
-		e.after(html);
+
+		// If replying or adding, surround the input with new comment structure
+		if(type == 'add' || type == 'reply') html = '<div class="ajaxcomment-container" id="ajaxcomment-new"><div class="ajaxcomment">' + html + '</div></div>';
+
+		// Put the input in the comment in the page
+		if(type == 'add') $('#ajaxcomments-add').after(html);
+		else if(type == 'edit') $(sel + ' .ajaxcomment-text:first').after(html);
+		else if(type == 'reply') $('.replies:first', sel).prepend(html);
+
+		// Disable the buttons and hide the text and add the source if editing
+		if(type == 'edit') {
+			$(sel + ' .buttons:first').hide()
+			$(sel + ' .ajaxcomment-text:first').hide();
+			$(sel + ' textarea:first').text(comments[id].text);
+		}
+
+		// Activate the buttons
+		$(sel + ' button.cancel:first').click(cancel);
+		$(sel + ' button.submit:first').data('id', id).click(submit);
 	}
 
 	/**
-	 * Remove any current comment input box
+	 * Remove any current comment input box, or new comment
 	 */
 	function cancel() {
+		$('#ajaxcomment-new').remove();
 		$('#ajaxcomment-input').remove();
 		$('.ajaxcomment-text').show();
+		$('#ajaxcomments .buttons').show();
 	}
 
 	/**
@@ -196,10 +203,9 @@ $(document).ready( function() {
 	 * - e is the button element that was clicked
 	 * - cmd will be add, reply or edit
 	 */
-	function submit(e, cmd) {
-		e = $(e);
+	function submit() {
+		var id = $(this).data('id');
 		var target;
-		var id = 0;
 		var text = '';
 
 		// If it's an add, create the target at the end
@@ -298,15 +304,37 @@ $(document).ready( function() {
 
 				// If it's a new comment insert it at the top
 				else $('#ajaxcomments').prepend(c.rendered);
+
+				// Since it's a newly added comment, activate it's buttons
+				$('button', sel).data('id', c.id);
+				$('.reply ', sel).click(function() { reply($(this).data('id')); });
+				$('.edit ', sel).click(function() { edit($(this).data('id')); });
+				$('.del ', sel).click(function() { del($(this).data('id')); });
 			}
-		}		
+		}
 	}
 
 	/**
 	 * Render a single comment as HTML (without its replies)
 	 */
 	function renderComment(c) {
-		return '<div class="ajaxcomment" id="ajaxcomment-' + c.id + '">' + c.html + '<div class="replies"></div></div>';
+		var html = '<div class="ajaxcomment-container" id="ajaxcomment-' + c.id + '">'
+			+ '<div class="ajaxcomment">'
+			+ '<div class="ajaxcomment-text">' + c.html + '</div>';
+		if( canComment) {
+				// Reply link
+				html += '<div class="buttons">'
+				html += '<button class="reply">' + mw.message( 'ajaxcomments-reply' ).text() + '</button>';
+
+				// If sysop, or no replies and current user is owner, add edit/del links
+				if( sysop || user == c.user ) {
+					html += '<button class="edit">' + mw.message( 'ajaxcomments-edit' ).text() + '</button>'
+						+ '<button class="del">' + mw.message( 'ajaxcomments-del' ).text() + '</button>';
+				}
+				html += '</div>';
+		}
+		html += '</div><div class="replies"></div></div>';
+		return html;
 	}
 
 /*
@@ -335,18 +363,9 @@ $(document).ready( function() {
 	 // - renders edit/delete link if sysop, or no replies and current user is owner
 	 // - if likeonly is set, return only the like/dislike links
 	private function renderComment( $id, $likeonly = false ) {
-		global $wgParser, $wgUser, $wgLang, $wgAjaxCommentsAvatars, $wgAjaxCommentsLikeDislike;
 		$curName = $wgUser->getName();
 		$c = $this->comments[$id];
 		$html = '';
-
-		// Render replies
-		$r = '';
-		foreach( $c[AJAXCOMMENTS_REPLIES] as $child ) $r .= $this->renderComment( $child );
-
-		// Get total likes and unlikes
-		$likelink = $dislikelink = '';
-		list( $like, $likes, $dislikes ) = $this->like( $id );
 
 		// Render user name as link
 		$name = $c[AJAXCOMMENTS_USER];
