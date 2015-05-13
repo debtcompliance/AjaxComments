@@ -65,30 +65,6 @@ $(document).ready( function() {
 	}
 
 	/**
-	 * An add link has been clicked
-	 */
-	function add() {
-		input('add');
-		$('#ajaxcomments-none').remove();
-	}
-
-	/**
-	 * An edit link has been clicked
-	 */
-	function edit(id) {
-		input('edit', id);
-		source(id);
-		e.hide();
-	}
-
-	/**
-	 * A reply link has been clicked
-	 */
-	function reply(id) {
-		input('reply', id);
-	}
-
-	/**
 	 * An delete link has been clicked
 	 */
 	function del(id) {
@@ -152,7 +128,7 @@ $(document).ready( function() {
 	}
 
 	/**
-	 * Open a comment input box for the passed commend (or new if null)
+	 * Open a comment input box to add, edit or reply
 	 */
 	function input(type, id) {
 		var sel, html;
@@ -185,7 +161,9 @@ $(document).ready( function() {
 
 		// Activate the buttons
 		$(sel + ' button.cancel:first').click(cancel);
-		$(sel + ' button.submit:first').data('id', id).click(submit);
+		$(sel + ' button.submit:first').data({'id': id, 'type': type}).click(function() {
+			submit( $(this).data('type'), $(this).data('id') );
+		});
 	}
 
 	/**
@@ -199,17 +177,13 @@ $(document).ready( function() {
 	}
 
 	/**
-	 * Submit a comment command to the server
-	 * - e is the button element that was clicked
-	 * - cmd will be add, reply or edit
+	 * Submit a new comment, edit or reply
 	 */
-	function submit() {
-		var id = $(this).data('id');
-		var target;
-		var text = '';
-
+	function submit(type, id) {
+		var text, e = $('#ajaxcomment-' + id);
+/*
 		// If it's an add, create the target at the end
-		if( cmd == 'add' ) {
+		if( type == 'add' ) {
 			$('#ajaxcomment-add').parent().after('<div id="ajaxcomments-new"></div>');
 			target = $('#ajaxcomments-new');
 			text = $('#ajaxcomment-input textarea').val();
@@ -230,23 +204,23 @@ $(document).ready( function() {
 			text = $('#ajaxcomment-input textarea').val();
 			id = target.parent().attr('id').substr(13);
 		}
+*/
+		// Get the new text from the textarea
+		text = $('textarea:first', e).val();
+		console.log(text);
 
-		// Put a loader into the target
-		target.html('<div class="ajaxcomments-loader"></div>');
+		// Replace the comment content with a loader
+		cancel();
+		$('.ajaxcomment-text:first', e).html('<div class="ajaxcomments-loader"></div>');
 
-		// Send the command and replace the loader with the new post
+		// Send the command and render the returned data
 		$.ajax({
 			type: 'GET',
 			url: mw.util.wikiScript(),
-			data: {
-				action: 'ajax',
-				rs: 'AjaxComments::ajax',
-				rsargs: [cmd, page, id, text],
-			},
+			data: { action: 'ajax', rs: 'AjaxComments::ajax', rsargs: [type, page, id, text] },
 			dataType: 'json',
 			success: function(data) {
 				renderComments(data);
-				cancel();
 				if(ws) webSocket.send(wsAjaxCommentsEvent);
 			}
 		});
@@ -270,7 +244,7 @@ $(document).ready( function() {
 				? '<button id="ajaxcomments-add">' + mw.message('ajaxcomments-add').text() + '</button>'
 				: '<i>' + mw.message('ajaxcomments-anon').text() + '</i>';
 			$('#ajaxcomments').before('<div class="ajaxcomment-links">' + html + '</div>');
-			$('#ajaxcomments-add').click(add);
+			$('#ajaxcomments-add').click(function() { input('add'); });
 		}
 
 		// Copy all the data into the main comments data structure with rendered html
@@ -307,8 +281,8 @@ $(document).ready( function() {
 
 				// Since it's a newly added comment, activate it's buttons
 				$('button', sel).data('id', c.id);
-				$('.reply ', sel).click(function() { reply($(this).data('id')); });
-				$('.edit ', sel).click(function() { edit($(this).data('id')); });
+				$('.reply ', sel).click(function() { input('reply', $(this).data('id')); });
+				$('.edit ', sel).click(function() { input('edit', $(this).data('id')); });
 				$('.del ', sel).click(function() { del($(this).data('id')); });
 			}
 		}

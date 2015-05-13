@@ -121,13 +121,13 @@ class AjaxComments {
 	/**
 	 * Process the Ajax requests
 	 */
-	public static function ajax( $command, $page, $id = 0, $data  = '' ) {
+	public static function ajax( $type, $page, $id = 0, $data  = '' ) {
 		global $wgOut, $wgRequest;
 		header( 'Content-Type: application/json' );
 		$data = array();
 
 		// Perform the command on the talk content
-		switch( $command ) {
+		switch( $type ) {
 
 			case 'add':
 				$data = self::add( $text, $page );
