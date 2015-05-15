@@ -1,8 +1,12 @@
 #ajaxcomments textarea {
 	height: 100px;
 }
+#ajaxcomments-none {
+	font-style: italic;
+	margin-top: 10px;
+}
 .ajaxcomment-container .ajaxcomment-container {
-	margin-left: 15px;
+	margin-left: 25px;
 }
 .ajaxcomment {
 	margin: 10px 0 0 0;
@@ -14,12 +18,12 @@
 	-webkit-border-radius: 8px;
 	-khtml-border-radius: 8px;
 }
-
 .ajaxcomments-loader {
 	background: url( img/ajax-loader.gif ) no-repeat center center;
-	height: 75px;
 }
-
+.ajaxcomment-new .ajaxcomment-text {
+	height: 80px;
+}
 #ajaxcomments-wrapper button {
 	color: white;
 	background-color: #999;
@@ -35,19 +39,18 @@
 	margin-right: 5px;
 	cursor: pointer;
 }
-
-/*
-.ajaxcomment-input-reply {
-	margin-left: 15px;
+.ajaxcomment .buttons {
+	clear: both;
 }
 .ajaxcomment-icon {
 	float: left;
-	margin: 10px 5px 5px 0;
+	margin: 5px 5px 5px 0;
 }
 .ajaxcomment-sig {
 	color: #999;
 	font-size: 90%;
 }
+/*
 #ajaxcomment-like,
 #ajaxcomment-dislike {
 	font-weight: bold;

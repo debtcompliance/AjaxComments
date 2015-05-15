@@ -86,6 +86,7 @@ class AjaxComments {
 				'ajaxcomments-del',
 				'ajaxcomments-none',
 				'ajaxcomments-anon',
+				'ajaxcomments-sig',
 				'ajaxcomments-confirmdel',
 				'ajaxcomments-confirm',
 				'ajaxcomments-yes',
@@ -121,11 +122,11 @@ class AjaxComments {
 	/**
 	 * Process the Ajax requests
 	 */
-	public static function ajax( $type, $page, $id = 0, $data  = '' ) {
+	public static function ajax( $type, $page, $id = 0, $text = '' ) {
 		global $wgOut, $wgRequest;
 		header( 'Content-Type: application/json' );
 		$data = array();
-
+sleep(1);
 		// Perform the command on the talk content
 		switch( $type ) {
 
@@ -138,11 +139,11 @@ class AjaxComments {
 			break;
 
 			case 'edit':
-				$data = self::edit( $text, $page, $id );
+				$data = self::edit( $text, $id );
 			break;
 
 			case 'del':
-				$data = self::delete( $id ) === true ? array( 'success' => 1 ) : array( 'error' => $data );
+				$data = self::delete( $id );
 			break;
 
 			case 'like':
@@ -173,15 +174,16 @@ class AjaxComments {
 			'ac_time' => time(),
 			'ac_data' => $text,
 		) );
-		return $dbw->insertId();
+		return self::getComment( $dbw->insertId() );
 	}
 
 	/**
 	 * Edit an existing comment in the data structure
 	 */
-	private static function edit( $id, $text ) {
+	private static function edit( $text, $id ) {
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->update( AJAXCOMMENTS_TABLE, array( 'ac_data' => $text ), array( 'ac_id' => $id ) );
+		return self::getComment( $id );
 	}
 
 	/**
@@ -193,22 +195,22 @@ class AjaxComments {
 		$uid = $wgUser->getId();
 		$ts = time();
 		$dbw = wfGetDB( DB_MASTER );
-		$row = array(
+		$dbw->insert( AJAXCOMMENTS_TABLE, array(
 			'ac_type'   => AJAXCOMMENTS_DATATYPE_COMMENT,
 			'ac_parent' => $parent,
 			'ac_page'   => $page,
 			'ac_user'   => $uid,
 			'ac_time'   => $ts,
 			'ac_data'   => $text,
-		);
-		$dbw->insert( AJAXCOMMENTS_TABLE, $row );
-		return getComment( $row );
+		) );
+		return self::getComment( $dbw->insertId() );
 	}
 
 	/**
 	 * Delete a comment amd all its replies from the data structure
 	 */
 	private static function delete( $id ) {
+		global $wgUser;
 		$dbw = wfGetDB( DB_MASTER );
 
 		// Die if the comment is not owned by this user unless sysop
@@ -218,9 +220,10 @@ class AjaxComments {
 		}
 
 		// Delete this comment and all child comments and likes
-		$children = self::getChildren( $id, $id );
-		$children = implode( ',', $children );
-		return $dbw->delete( AJAXCOMMENTS_TABLE, "ac_id IN ($children)" );
+		$children = self::children( $id );
+		$children[] = $id;
+		$dbw->delete( AJAXCOMMENTS_TABLE, 'ac_id IN (' . implode( ',', $children ) . ')' );
+		return $children;
 	}
 
 	/**
@@ -260,10 +263,11 @@ class AjaxComments {
 	/**
 	 * Get all child comments and likes of the passed id (i.e. replies and replies of replies etc)
 	 */
-	private static function getChildren( $id, $children = array() ) {
+	private static function children( $id ) {
+		$children = array();
 		$dbr = wfGetDB( DB_SLAVE );
 		$res = $dbr->select( AJAXCOMMENTS_TABLE, 'ac_id', array( 'ac_parent' => $id ) );
-		foreach( $res as $row ) $children = $this->children( $row->ac_id, $children );
+		foreach( $res as $row ) foreach( self::children( $row->ac_id ) as $child ) $children[] = $child;
 		return $children;
 	}
 
@@ -271,7 +275,8 @@ class AjaxComments {
 	 * Return the passed comment in client-ready format
 	 * - row can be a comment id or a db row structure
 	 */
-	private static function getComment( $row ) {
+	private static function getComment( $row, $foo = false ) {
+		global $wgLang, $wgAjaxCommentsAvatars;
 		$likes = $dislikes = array();
 
 		// Read the row from DB if id supplied
@@ -282,7 +287,7 @@ class AjaxComments {
 
 			// Get the like data for this comment
 			if( $row->ac_type == AJAXCOMMENTS_DATATYPE_COMMENT ) {
-				$res = $dbw->select(
+				$res = $dbr->select(
 					AJAXCOMMENTS_TABLE,
 					'ac_user,ac_data',
 					array( 'ac_type' => AJAXCOMMENTS_DATATYPE_LIKE, 'ac_parent' => $id ),
@@ -297,16 +302,20 @@ class AjaxComments {
 		}
 
 		// Convert to client-ready format
+		$user = User::newFromId( $row->ac_user );
 		return array(
 			'id'      => $row->ac_id,
 			'parent'  => $row->ac_parent,
 			'user'    => $row->ac_user,
-			'name'    => User::newFromId( $row->ac_user )->getName(),
+			'name'    => $user->getName(),
 			'time'    => $row->ac_time,
+			'date'    => $wgLang->timeanddate( $row->ac_time, true ),
 			'text'    => $row->ac_data,
 			'html'    => self::parse( $row->ac_data, $row->ac_page ),
 			'like'    => $likes,
 			'dislike' => $dislikes,
+			'avatar'  => $wgAjaxCommentsAvatars && $user->isEmailConfirmed()
+				? "http://www.gravatar.com/avatar/" . md5( strtolower( $user->getEmail() ) ) . "?s=50&d=wavatar" : false
 		);
 	}
 
