@@ -251,21 +251,39 @@ sleep(1);
 		$row = $dbw->selectRow( AJAXCOMMENTS_TABLE, 'ac_data, ac_id', array(
 			'ac_type'   => AJAXCOMMENTS_DATATYPE_LIKE,
 			'ac_parent' => $id,
-			'ac_user'   => $uid
+			'ac_user'   => $uid,
 		) );
-		$like = $row ? $row->ac_page : 0;
-		$lid = $row ? $row->ac_id : 0;
 
-		// Remove the user if they now nolonger like or dislike, otherwise update their value
-		if( $like + $val == 0 ) $dbw->delete( AJAXCOMMENTS_TABLE, array( 'ac_id' => $lid ) );
-		else $dbw->update( AJAXCOMMENTS_TABLE, array( 'ac_data' => $like + $val ), array( 'ac_id' => $lid ) );
+		// If there is an existing value,
+		if( $row ) {
+			if( $val == $row->ac_data ) return false; // Already liked/disliked
+			$like = $row->ac_data + $val;
+			$lid = $row->ac_id;
+
+			// Remove the user if they now nolonger like or dislike, 
+			if( $like == 0 ) $dbw->delete( AJAXCOMMENTS_TABLE, array( 'ac_id' => $lid ) );
+
+			// Otherwise update their value
+			else $dbw->update( AJAXCOMMENTS_TABLE, array( 'ac_data' => $like ), array( 'ac_id' => $lid ) );
+		}
+
+		// If no existing value, insert one now
+		else {
+			$like = $val;
+			$dbw->insert( AJAXCOMMENTS_TABLE, array(
+				'ac_type'   => AJAXCOMMENTS_DATATYPE_LIKE,
+				'ac_parent' => $id,
+				'ac_user'   => $uid,
+				'ac_data'   => $val,
+			) );
+		}
 
 		// Return a message string about the update
 		if( $val > 0 ) {
-			if( $like < 0 ) return wfMessage( 'ajaxcomments-undislike', $name, $cname )->text();
+			if( $like == 0 ) return wfMessage( 'ajaxcomments-undislike', $name, $cname )->text();
 			else return wfMessage( 'ajaxcomments-like', $name, $cname )->text();
 		} else {
-			if( $like > 0 ) return wfMessage( 'ajaxcomments-unlike', $name, $cname )->text();
+			if( $like == 0 ) return wfMessage( 'ajaxcomments-unlike', $name, $cname )->text();
 			else return wfMessage( 'ajaxcomments-dislike', $name, $cname )->text();
 		}
 	}
@@ -285,29 +303,30 @@ sleep(1);
 	 * Return the passed comment in client-ready format
 	 * - row can be a comment id or a db row structure
 	 */
-	private static function getComment( $row, $foo = false ) {
+	private static function getComment( $row ) {
 		global $wgLang, $wgAjaxCommentsAvatars;
 		$likes = $dislikes = array();
+		$dbr = wfGetDB( DB_SLAVE );
 
 		// Read the row from DB if id supplied
 		if( is_numeric( $row ) ) {
 			$id = $row;
-			$dbr = wfGetDB( DB_SLAVE );
 			$row = $dbr->selectRow( AJAXCOMMENTS_TABLE, '*', array( 'ac_id' => $id ) );
+			if( !$row ) die( "Error: Comment $id not found" );
+		}
 
-			// Get the like data for this comment
-			if( $row->ac_type == AJAXCOMMENTS_DATATYPE_COMMENT ) {
-				$res = $dbr->select(
-					AJAXCOMMENTS_TABLE,
-					'ac_user,ac_data',
-					array( 'ac_type' => AJAXCOMMENTS_DATATYPE_LIKE, 'ac_parent' => $id ),
-					__METHOD__,
-					array( 'ORDER BY' => 'ac_time' )
-				);
-				foreach( $res as $row ) {
-					$name = User::newFromId( $row->ac_user )->getName();
-					$row->ac_data > 0 ? $likes[] = $name : $dislikes[] = $name;
-				}
+		// Get the like data for this comment
+		if( $row->ac_type == AJAXCOMMENTS_DATATYPE_COMMENT ) {
+			$res = $dbr->select(
+				AJAXCOMMENTS_TABLE,
+				'ac_user,ac_data',
+				array( 'ac_type' => AJAXCOMMENTS_DATATYPE_LIKE, 'ac_parent' => $row->ac_id ),
+				__METHOD__,
+				array( 'ORDER BY' => 'ac_time' )
+			);
+			foreach( $res as $like ) {
+				$name = User::newFromId( $like->ac_user )->getName();
+				$like->ac_data > 0 ? $likes[] = $name : $dislikes[] = $name;
 			}
 		}
 
@@ -335,7 +354,7 @@ sleep(1);
 	private static function getComments( $page, $ts = false ) {
 
 		// Query DB for all comments and likes for the page (after ts if supplied)
-		$cond = array( 'ac_page' => $page );
+		$cond = array( 'ac_type' => AJAXCOMMENTS_DATATYPE_COMMENT, 'ac_page' => $page );
 		if( $ts ) $cond[] = "ac_time > $ts";
 		$dbr = wfGetDB( DB_SLAVE );
 		$res = $dbr->select(
@@ -346,18 +365,8 @@ sleep(1);
 			array( 'ORDER BY' => 'ac_time' )
 		);
 
-		// Get rows changing user id's to names and separating into lists of comments and likes
-		$comments = $likes = array();
-		foreach( $res as $row ) {
-			$item = self::getComment( $row );
-			$row->ac_type == AJAXCOMMENTS_DATATYPE_COMMENT ? $comments[] = $item : $likes[] = $item;
-		}
-
-		// Put the like data into the associated comment data
-		foreach( $likes as $id => $item ) {
-			$item['data'] > 0 ? $comments[$item['parent']]['like'][] = $item['name'] : $comments[$item['parent']]['dislike'][] = $item['name'];
-		}
-
+		$comments = array();
+		foreach( $res as $row ) $comments[] = self::getComment( $row );
 		return $comments;
 	}
 

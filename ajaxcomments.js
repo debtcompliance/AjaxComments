@@ -9,8 +9,9 @@ $(document).ready( function() {
 
 	// User info
 	var user = mw.config.get('wgUserId');
+	var username = mw.config.get('wgUserName');
 	var groups = mw.config.get('wgUserGroups');
-	var sysop = $.inArray( 'sysop', groups );
+	var sysop = $.inArray( 'sysop', groups ) >= 0;
 
 	// Is the user allowed to add comments/edit etc?
 	var canComment = mw.config.get('ajaxCommentsCanComment');
@@ -121,7 +122,7 @@ $(document).ready( function() {
 	 */
 	function like(id, val) {
 		var target = $('#ajaxcomments-' + id);
-		console.log('AjaxComments: like(' + id + ')');
+		console.log('AjaxComments: ' + (val < 0 ? 'dis' : '') + 'like(' + id + ')');
 		$.ajax({
 			type: 'GET',
 			url: mw.util.wikiScript(),
@@ -269,11 +270,15 @@ $(document).ready( function() {
 				else $('#ajaxcomments').prepend(c.rendered);
 			}
 
-			// Activate it's buttons
-			$(sel + ' button').data('id', c.id);
-			$(sel + ' .reply ').click(function() { input('reply', $(this).data('id')); });
-			$(sel + ' .edit ').click(function() { input('edit', $(this).data('id')); });
-			$(sel + ' .del ').click(function() { del([$(this).data('id')], true); });
+			// Activate it's buttons if the user can comment
+			if(canComment) {
+				$(sel + ' button').data('id', c.id);
+				$(sel + ' .reply').click(function() { input('reply', $(this).data('id')); });
+				$(sel + ' .edit').click(function() { input('edit', $(this).data('id')); });
+				$(sel + ' .del').click(function() { del([$(this).data('id')], true); });
+				if($.inArray(username, c.like) < 0) $(sel + ' .like').css('cursor','pointer').click(function() { like($(this).data('id'), 1); });
+				if($.inArray(username, c.dislike) < 0) $(sel + ' .dislike').css('cursor','pointer').click(function() { like($(this).data('id'), -1); });
+			}
 		}
 
 		// If no comments, add message
@@ -292,16 +297,13 @@ $(document).ready( function() {
 			+ '<div class="buttons">'
 			+ likeButton(c, 'like') + likeButton(c, 'dislike');                                                             // Like and dislike buttons
 
-		if( canComment) {
-
-				// Reply link
-				html += '<button class="reply">' + mw.message('ajaxcomments-reply').text() + '</button>';
-
-				// If sysop, or current user is owner, add edit/del links
-				if( sysop || user == c.user ) {
-					html += '<button class="edit">' + mw.message('ajaxcomments-edit').text() + '</button>'
-						+ '<button class="del">' + mw.message('ajaxcomments-del').text() + '</button>';
-				}
+		// Add reply and edit/del buttons if user can comment and has right to edit this comment
+		if(canComment) {
+			html += '<button class="reply">' + mw.message('ajaxcomments-reply').text() + '</button>';
+			if( sysop || user == c.user ) {
+				html += '<button class="edit">' + mw.message('ajaxcomments-edit').text() + '</button>'
+					+ '<button class="del">' + mw.message('ajaxcomments-del').text() + '</button>';
+			}
 		}
 		html += '</div></div><div class="replies"></div></div>';
 		return html;
@@ -319,20 +321,20 @@ $(document).ready( function() {
 	 * Render a like or dislike button for the passed comment
 	 */
 	function likeButton(c, type) {
-		var i, csv = '', c = '', names = c[type] ? c[type] : [], len = names.length, title = '';
+		var i, csv = '', sep = '', names = c[type], len = names.length, title = '';
 
 		// Format the list of names
 		if(len < 1) title = mw.message('ajaxcomments-no' + type).text();
 		else if(len == 1) title = mw.message('ajaxcomments-one' + type, names[0]).text();
 		else {
 			for( i = 0; i < len - 1; i++ ) {
-				csv += c + names[i];
-				c = ', ';
+				csv += sep + names[i];
+				sep = ', ';
 			}
 			title = mw.message('ajaxcomments-many' + type, csv, names[len - 1]).text();
 		}
 
-		return '<button class="ajaxcomment-' + type + '" title="' + title + '">' + ( type == 'like' ? '+' : '-' ) + len + '</button>';
+		return '<button class="' + type + '" title="' + title + '">' + ( type == 'like' ? '+' : '-' ) + len + '</button>';
 	}
 
 	/**
