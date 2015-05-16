@@ -288,7 +288,7 @@ $(document).ready( function() {
 		var html = '<div class="ajaxcomment-container" id="ajaxcomment-' + c.id + '"><div class="ajaxcomment">'
 			+ '<div class="ajaxcomment-sig">' + mw.message('ajaxcomments-sig', ulink, c.date ).text() + '</div>'            // Signature
 			+ ( c.avatar ? '<div class="ajaxcomment-icon"><img src="' + c.avatar + '" alt="' + c.name + '" /></div>' : '' ) // Avatar
-			+ '<div class="ajaxcomment-text">' + c.html + '</div>';                                                         // Comment body
+			+ '<div class="ajaxcomment-text">' + c.html + '</div>'                                                          // Comment body
 			+ '<div class="buttons">'
 			+ likeButton(c, 'like') + likeButton(c, 'dislike');                                                             // Like and dislike buttons
 
@@ -306,27 +306,11 @@ $(document).ready( function() {
 		html += '</div></div><div class="replies"></div></div>';
 		return html;
 	}
-/*
-				if( $curName != $name ) {
-					if( $like <= 0 ) $likelink = " onclick=\"javascript:ajaxcomment_like('$id',1)\" class=\"ajaxcomment-active\"";
-					if( $like >= 0 ) $dislikelink = " onclick=\"javascript:ajaxcomment_like('$id',-1)\" class=\"ajaxcomment-active\"";
-				}
 
-				// Add the likes and dislikes links
-				$clikes = count( $likes );
-				$cdislikes = count( $dislikes );
-				$likes = $this->formatNameList( $likes, 'like' );
-				$dislikes = $this->formatNameList( $dislikes, 'dislike' );
-				$html .= "<li title=\"$likes\" id=\"ajaxcomment-like\"$likelink>$clikes</li>\n";
-				$html .= "<li title=\"$dislikes\" id=\"ajaxcomment-dislike\"$dislikelink>$cdislikes</li>\n";
-			}
-		}
-*/
 	/**
 	 * Add a message if no comments, remove message if comments
 	 */
 	function noComments() {
-		console.dir(comments);
 		if(hasKeys(comments)) $('#ajaxcomments-none').remove();
 		else $('#ajaxcomments').html( '<div id="ajaxcomments-none">' + mw.message('ajaxcomments-none').text() + '</div>' );
 	}
@@ -335,9 +319,7 @@ $(document).ready( function() {
 	 * Render a like or dislike button for the passed comment
 	 */
 	function likeButton(c, type) {
-		console.dir(c);
-		var i, csv = '', c = '', names = c[type];
-		var len = names.length, title = '';
+		var i, csv = '', c = '', names = c[type] ? c[type] : [], len = names.length, title = '';
 
 		// Format the list of names
 		if(len < 1) title = mw.message('ajaxcomments-no' + type).text();
@@ -350,7 +332,7 @@ $(document).ready( function() {
 			title = mw.message('ajaxcomments-many' + type, csv, names[len - 1]).text();
 		}
 
-		return '<button class="ajaxcomment-' + type + '" title="' + title + '">' + len + '</button>';
+		return '<button class="ajaxcomment-' + type + '" title="' + title + '">' + ( type == 'like' ? '+' : '-' ) + len + '</button>';
 	}
 
 	/**
