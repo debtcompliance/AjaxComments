@@ -284,25 +284,26 @@ $(document).ready( function() {
 	 * Render a single comment as HTML (without its replies)
 	 */
 	function renderComment(c) {
-		var ulink = '<a href="' + mw.util.getUrl('User:' + c.name) + '" title="' + c.name + '">' + c.name + '</a>';
-		var html = '<div class="ajaxcomment-container" id="ajaxcomment-' + c.id + '">'
-			+ '<div class="ajaxcomment">'
-			+ '<div class="ajaxcomment-sig">' + mw.message('ajaxcomments-sig', ulink, c.date ).text() + '</div>'
-			+ ( c.avatar ? '<div class="ajaxcomment-icon"><img src="' + c.avatar + '" alt="' + c.name + '" /></div>' : '' )
-			+ '<div class="ajaxcomment-text">' + c.html + '</div>';
+		var ulink = '<a href="' + mw.util.getUrl('User:' + c.name) + '" title="' + c.name + '">' + c.name + '</a>';         // Link to user page
+		var html = '<div class="ajaxcomment-container" id="ajaxcomment-' + c.id + '"><div class="ajaxcomment">'
+			+ '<div class="ajaxcomment-sig">' + mw.message('ajaxcomments-sig', ulink, c.date ).text() + '</div>'            // Signature
+			+ ( c.avatar ? '<div class="ajaxcomment-icon"><img src="' + c.avatar + '" alt="' + c.name + '" /></div>' : '' ) // Avatar
+			+ '<div class="ajaxcomment-text">' + c.html + '</div>';                                                         // Comment body
+			+ '<div class="buttons">'
+			+ likeButton(c, 'like') + likeButton(c, 'dislike');                                                             // Like and dislike buttons
+
 		if( canComment) {
+
 				// Reply link
-				html += '<div class="buttons">'
 				html += '<button class="reply">' + mw.message('ajaxcomments-reply').text() + '</button>';
 
-				// If sysop, or no replies and current user is owner, add edit/del links
+				// If sysop, or current user is owner, add edit/del links
 				if( sysop || user == c.user ) {
 					html += '<button class="edit">' + mw.message('ajaxcomments-edit').text() + '</button>'
 						+ '<button class="del">' + mw.message('ajaxcomments-del').text() + '</button>';
 				}
-				html += '</div>';
 		}
-		html += '</div><div class="replies"></div></div>';
+		html += '</div></div><div class="replies"></div></div>';
 		return html;
 	}
 /*
@@ -331,17 +332,23 @@ $(document).ready( function() {
 	}
 
 	/**
-	 * Format the name list text for likes and dislikes
+	 * Render a like or dislike button for the passed comment
 	 */
-	function formatNameList(list, type) {
-		var i, csv = '', c = '', len = list.length;
-		if(len < 1) return mw.message('ajaxcomments-no' + type).text();
-		if(len == 1) return mw.message('ajaxcomments-one' + type, list[0]).text();
-		for( i = 0; i < len - 1; i++ ) {
-			csv += c + list[i];
-			c = ', ';
+	function likeButton(c, type) {
+		var i, csv = '', c = '', names = c[type], len = names.length, title = '';
+
+		// Format the list of names
+		if(len < 1) title = mw.message('ajaxcomments-no' + type).text();
+		else if(len == 1) title = mw.message('ajaxcomments-one' + type, names[0]).text();
+		else {
+			for( i = 0; i < len - 1; i++ ) {
+				csv += c + names[i];
+				c = ', ';
+			}
+			title = mw.message('ajaxcomments-many' + type, csv, names[len - 1]).text();
 		}
-		return mw.message('ajaxcomments-many' + type, csv, list[len - 1]).text();
+
+		return '<button class="ajaxcomment-' + type + '" title="' + title + '">' + len + '</button>';
 	}
 
 	/**
