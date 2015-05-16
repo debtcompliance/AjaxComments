@@ -289,8 +289,10 @@ $(document).ready( function() {
 	 * Render a single comment as HTML (without its replies)
 	 */
 	function renderComment(c) {
+		var hash = window.location.hash == '#comment' + c.id ? ' selected' : '';                                            // Make this comment selected if t's ID is in the # fragment
 		var ulink = '<a href="' + mw.util.getUrl('User:' + c.name) + '" title="' + c.name + '">' + c.name + '</a>';         // Link to user page
-		var html = '<div class="ajaxcomment-container" id="ajaxcomment-' + c.id + '"><div class="ajaxcomment">'
+		var html = '<div class="ajaxcomment-container" id="ajaxcomment-' + c.id + '">'
+			+ '<a name="comment' + c.id + '"></a><div class="ajaxcomment' + hash + '">'                                     // Allow scrolling to the comment with #
 			+ '<div class="ajaxcomment-sig">' + mw.message('ajaxcomments-sig', ulink, c.date ).text() + '</div>'            // Signature
 			+ ( c.avatar ? '<div class="ajaxcomment-icon"><img src="' + c.avatar + '" alt="' + c.name + '" /></div>' : '' ) // Avatar
 			+ '<div class="ajaxcomment-text">' + c.html + '</div>'                                                          // Comment body

@@ -18,6 +18,9 @@
 	-webkit-border-radius: 8px;
 	-khtml-border-radius: 8px;
 }
+.ajaxcomment.selected {
+	border: 2px solid #c00;
+}
 .ajaxcomments-loader {
 	background: url( img/ajax-loader.gif ) no-repeat center center;
 }
