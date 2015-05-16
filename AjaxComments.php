@@ -267,7 +267,10 @@ sleep(1);
 		$children = array();
 		$dbr = wfGetDB( DB_SLAVE );
 		$res = $dbr->select( AJAXCOMMENTS_TABLE, 'ac_id', array( 'ac_parent' => $id ) );
-		foreach( $res as $row ) foreach( self::children( $row->ac_id ) as $child ) $children[] = $child;
+		foreach( $res as $row ) {
+			$children[] = $row->ac_id;
+			foreach( self::children( $row->ac_id ) as $child ) $children[] = $child;
+		}
 		return $children;
 	}
 
