@@ -262,7 +262,7 @@ sleep(1);
 
 		// Return a message string about the update
 		if( $val > 0 ) {
-			if( $like < 0 ) return array( wfMessage( 'ajaxcomments-undislike', $name, $cname )->text();
+			if( $like < 0 ) return wfMessage( 'ajaxcomments-undislike', $name, $cname )->text();
 			else return wfMessage( 'ajaxcomments-like', $name, $cname )->text();
 		} else {
 			if( $like > 0 ) return wfMessage( 'ajaxcomments-unlike', $name, $cname )->text();
