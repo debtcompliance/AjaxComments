@@ -335,7 +335,9 @@ $(document).ready( function() {
 	 * Render a like or dislike button for the passed comment
 	 */
 	function likeButton(c, type) {
-		var i, csv = '', c = '', names = c[type], len = names.length, title = '';
+		console.dir(c);
+		var i, csv = '', c = '', names = c[type];
+		var len = names.length, title = '';
 
 		// Format the list of names
 		if(len < 1) title = mw.message('ajaxcomments-no' + type).text();
