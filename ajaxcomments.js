@@ -125,20 +125,14 @@ $(document).ready( function() {
 		$.ajax({
 			type: 'GET',
 			url: mw.util.wikiScript(),
-			data: {
-				action: 'ajax',
-				rs: 'AjaxComments::ajax',
-				rsargs: ['like', page, id, val],
-			},
+			data: { action: 'ajax', rs: 'AjaxComments::ajax', rsargs: ['like', page, id, val] },
 			dataType: 'json',
-			success: function(html) {
-
-				// If something is returned, replace the like/dislike links with it
-				if(html) {
-					$('#ajaxcomment-like',this).first().remove();
-					$('#ajaxcomment-dislike',this).first().replaceWith(html);
-					if(ws) webSocket.send(wsAjaxCommentsEvent);
-				}
+			success: function(data) {
+				var c = comments[id];
+				c['like'] = data.like;
+				c['dislike'] = data.dislike;
+				renderComments([c]);
+				if(ws) webSocket.send(wsAjaxCommentsRender, [id]);
 			}
 		});
 	}
@@ -311,83 +305,7 @@ $(document).ready( function() {
 		html += '</div><div class="replies"></div></div>';
 		return html;
 	}
-
-	/**
-	 * Add a message if no comments, remove message if comments
-	 */
-	function noComments() {
-		console.dir(comments);
-		if(hasKeys(comments)) $('#ajaxcomments-none').remove();
-		else $('#ajaxcomments').html( '<div id="ajaxcomments-none">' + mw.message('ajaxcomments-none').text() + '</div>' );
-	}
-
-	/**
-	 * Return whether or not the passed object has any keys without iterating over it or using Object.keys
-	 */
-	function hasKeys(o) {
-		var i = false;
-		for(i in o) break;
-		return i !== false;
-	};
 /*
-	 // Render the comment data structure as HTML
-	 // - also render a no comments message if none
-	 // - and an add comments link at the top
-	private function renderComments() {
-		global $wgUser;
-		$html = '';
-
-		if( $html == '' ) $html = "<i id=\"ajaxcomments-none\">" . wfMessage( 'ajaxcomments-none' )->text() . "</i><br />";
-
-
-	}
-
-	 // Render a single comment and any of it's replies
-	 // - this is recursive - it will render any replies which could in turn contain replies etc
-	 // - renders edit/delete link if sysop, or no replies and current user is owner
-	 // - if likeonly is set, return only the like/dislike links
-	private function renderComment( $id, $likeonly = false ) {
-		$curName = $wgUser->getName();
-		$c = $this->comments[$id];
-		$html = '';
-
-		// Render user name as link
-		$name = $c[AJAXCOMMENTS_USER];
-		$user = User::newFromName( $name );
-		$url = $user->getUserPage()->getLocalUrl();
-		$ulink = "<a href=\"$url\">$name</a>";
-
-		// Get the user's gravitar url
-		if( $wgAjaxCommentsAvatars && $user->isEmailConfirmed() ) {
-			$email = $user->getEmail();
-			$grav = "http://www.gravatar.com/avatar/" . md5( strtolower( $email ) ) . "?s=50&d=wavatar";
-			$grav = "<img src=\"$grav\" alt=\"$name\" />";
-		} else $grav = '';
-
-		if( !$likeonly ) $html .= "<div class=\"ajaxcomment\" id=\"ajaxcomments-$id\">\n" .
-			"<div class=\"ajaxcomment-sig\">" .
-				wfMessage( 'ajaxcomments-sig', $ulink, $wgLang->timeanddate( $c[AJAXCOMMENTS_DATE], true ) )->text() .
-			"</div>\n<div class=\"ajaxcomment-icon\">$grav</div><div class=\"ajaxcomment-text\">" .
-				$wgParser->parse( $c[AJAXCOMMENTS_TEXT], $this->talk, new ParserOptions(), true, true )->getText() .
-			"</div>\n<ul class=\"ajaxcomment-links\">";
-
-		// If logged in, allow replies and editing etc
-		if( $this->canComment ) {
-
-			if( !$likeonly ) {
-
-				// Reply link
-				$html .= "<li id=\"ajaxcomment-reply\"><a href=\"javascript:ajaxcomment_reply('$id')\">" . wfMessage( 'ajaxcomments-reply' )->text() . "</a></li>\n";
-
-				// If sysop, or no replies and current user is owner, add edit/del links
-				if( in_array( 'sysop', $wgUser->getEffectiveGroups() ) || ( $curName == $c[AJAXCOMMENTS_USER] && $r == '' ) ) {
-					$html .= "<li id=\"ajaxcomment-edit\"><a href=\"javascript:ajaxcomment_edit('$id')\">" . wfMessage( 'ajaxcomments-edit' )->text() . "</a></li>\n";
-					$html .= "<li id=\"ajaxcomment-del\"><a href=\"javascript:ajaxcomment_del('$id')\">" . wfMessage( 'ajaxcomments-del' )->text() . "</a></li>\n";
-				}
-			}
-
-			// Make the like/dislike links
-			if( $wgAjaxCommentsLikeDislike ) {
 				if( $curName != $name ) {
 					if( $like <= 0 ) $likelink = " onclick=\"javascript:ajaxcomment_like('$id',1)\" class=\"ajaxcomment-active\"";
 					if( $like >= 0 ) $dislikelink = " onclick=\"javascript:ajaxcomment_like('$id',-1)\" class=\"ajaxcomment-active\"";
@@ -402,19 +320,36 @@ $(document).ready( function() {
 				$html .= "<li title=\"$dislikes\" id=\"ajaxcomment-dislike\"$dislikelink>$cdislikes</li>\n";
 			}
 		}
-
-		if( !$likeonly ) $html .= "</ul>$r</div>\n";
-		return $html;
-	}
-
-	private function formatNameList( $list, $msg ) {
-		$len = count( $list );
-		if( $len < 1 ) return wfMessage( "ajaxcomments-no$msg" )->text();
-		if( $len == 1 ) return wfMessage( "ajaxcomments-one$msg", $list[0] )->text();
-		$last = array_pop( $list );
-		return wfMessage( "ajaxcomments-many$msg", join( ', ', $list ), $last )->text();
-	}
 */
+	/**
+	 * Add a message if no comments, remove message if comments
+	 */
+	function noComments() {
+		console.dir(comments);
+		if(hasKeys(comments)) $('#ajaxcomments-none').remove();
+		else $('#ajaxcomments').html( '<div id="ajaxcomments-none">' + mw.message('ajaxcomments-none').text() + '</div>' );
+	}
 
+	/**
+	 * Format the name list text for likes and dislikes
+	 */
+	function formatNameList(list, type) {
+		var i, csv = '', c = '', len = list.length;
+		if(len < 1) return mw.message('ajaxcomments-no' + type).text();
+		if(len == 1) return mw.message('ajaxcomments-one' + type, list[0]).text();
+		for( i = 0; i < len - 1; i++ ) {
+			csv += c + list[i];
+			c = ', ';
+		}
+		return mw.message('ajaxcomments-many' + type, csv, list[len - 1]).text();
+	}
 
+	/**
+	 * Return whether or not the passed object has any keys without iterating over it or using Object.keys
+	 */
+	function hasKeys(o) {
+		var i = false;
+		for(i in o) break;
+		return i !== false;
+	};
 });

@@ -92,6 +92,12 @@ class AjaxComments {
 				'ajaxcomments-yes',
 				'ajaxcomments-post',
 				'ajaxcomments-cancel',
+				'ajaxcomments-nolike',
+				'ajaxcomments-onelike',
+				'ajaxcomments-manylike',
+				'ajaxcomments-nodislike',
+				'ajaxcomments-onedislike',
+				'ajaxcomments-manydislike',
 			),
 		);
 		$wgOut->addModules( 'ext.ajaxcomments' );
@@ -122,43 +128,48 @@ class AjaxComments {
 	/**
 	 * Process the Ajax requests
 	 */
-	public static function ajax( $type, $page, $id = 0, $text = '' ) {
+	public static function ajax( $type, $page, $id = 0, $data = '' ) {
 		global $wgOut, $wgRequest;
 		header( 'Content-Type: application/json' );
-		$data = array();
+		$result = array();
 sleep(1);
 		// Perform the command on the talk content
 		switch( $type ) {
 
 			case 'add':
-				$data = self::add( $text, $page );
+				$result = self::add( $data, $page );
 			break;
 
 			case 'reply':
-				$data = self::reply( $text, $page, $id );
+				$result = self::reply( $data, $page, $id );
 			break;
 
 			case 'edit':
-				$data = self::edit( $text, $id );
+				$result = self::edit( $data, $id );
 			break;
 
 			case 'del':
-				$data = self::delete( $id );
+				$result = self::delete( $id );
 			break;
 
 			case 'like':
-				$data = array( 'message' => self::like( $id, $text ) );
+				$msg = self::like( $data, $id );
+				$comment = self::getComment( $id );
+				$result = array(
+					'like' => $comment['like'],
+					'dislike' => $comment['dislike']
+				);
 			break;
 
 			case 'get':
-				$data = self::getComments( $page, $id );
+				$result = self::getComments( $page, $id );
 			break;
 
 			default:
-				$data['error'] = "unknown action";
+				$result['error'] = "unknown action";
 		}
 
-		return json_encode( $data );
+		return json_encode( $result );
 	}
 
 	/**
@@ -221,7 +232,6 @@ sleep(1);
 
 		// Delete this comment and all child comments and likes
 		$children = self::children( $id );
-		$children[] = $id;
 		$dbw->delete( AJAXCOMMENTS_TABLE, 'ac_id IN (' . implode( ',', $children ) . ')' );
 		return $children;
 	}
@@ -229,7 +239,7 @@ sleep(1);
 	/**
 	 * Like/unlike a comment returning a message describing the change
 	 */
-	private static function like( $id, $val ) {
+	private static function like( $val, $id ) {
 		global $wgUser;
 		$dbw = wfGetDB( DB_MASTER );
 		$row = $dbw->selectRow( AJAXCOMMENTS_TABLE, 'ac_user', array( 'ac_id' => $id ) );
@@ -252,7 +262,7 @@ sleep(1);
 
 		// Return a message string about the update
 		if( $val > 0 ) {
-			if( $like < 0 ) return wfMessage( 'ajaxcomments-undislike', $name, $cname )->text();
+			if( $like < 0 ) return array( wfMessage( 'ajaxcomments-undislike', $name, $cname )->text();
 			else return wfMessage( 'ajaxcomments-like', $name, $cname )->text();
 		} else {
 			if( $like > 0 ) return wfMessage( 'ajaxcomments-unlike', $name, $cname )->text();
@@ -264,13 +274,10 @@ sleep(1);
 	 * Get all child comments and likes of the passed id (i.e. replies and replies of replies etc)
 	 */
 	private static function children( $id ) {
-		$children = array();
+		$children = array( $id );
 		$dbr = wfGetDB( DB_SLAVE );
 		$res = $dbr->select( AJAXCOMMENTS_TABLE, 'ac_id', array( 'ac_parent' => $id ) );
-		foreach( $res as $row ) {
-			$children[] = $row->ac_id;
-			foreach( self::children( $row->ac_id ) as $child ) $children[] = $child;
-		}
+		foreach( $res as $row ) $children = array_merge( $children, self::children( $row->ac_id ) );
 		return $children;
 	}
 
