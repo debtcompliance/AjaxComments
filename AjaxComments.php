@@ -22,6 +22,15 @@ $wgAjaxCommentsLikeDislike = true;        // add a like/dislike link to each com
 $wgAjaxCommentsAvatars = true;            // use the gravatar service for users icons
 $wgAjaxCommentsPollServer = 0;            // poll the server to see if any changes to comments have been made and update if so
 
+// Add a new log type
+$wgLogTypes[]                       = 'ajaxcomments';
+$wgLogNames['ajaxcomments']         = 'ajaxcomments-logpage';
+$wgLogHeaders['ajaxcomments']       = 'ajaxcomments-logpagetext';
+$wgLogActions['ajaxcomments/add']   = 'ajaxcomments-add-desc';
+$wgLogActions['ajaxcomments/reply'] = 'ajaxcomments-reply-desc';
+$wgLogActions['ajaxcomments/edit']  = 'ajaxcomments-edit-desc';
+$wgLogActions['ajaxcomments/del']   = 'ajaxcomments-del-desc';
+
 $wgAjaxExportList[] = 'AjaxComments::ajax';
 
 $wgExtensionCredits['other'][] = array(
@@ -132,7 +141,7 @@ class AjaxComments {
 		global $wgOut, $wgRequest;
 		header( 'Content-Type: application/json' );
 		$result = array();
-sleep(1);
+
 		// Perform the command on the talk content
 		switch( $type ) {
 
@@ -185,7 +194,14 @@ sleep(1);
 			'ac_time' => time(),
 			'ac_data' => $text,
 		) );
-		return self::getComment( $dbw->insertId() );
+		$id = $dbw->insertId();
+
+		// Add a log entry about this activity
+		$title = Title::newFromId( $page );
+		$log = new LogPage( 'ajaxcomments', true );
+		$log->addEntry( 'add', $title, wfMessage( 'ajaxcomments-add-summary', $title->getPrefixedText(), $id )->text(), array( $title->getPrefixedText() ) );
+
+		return self::getComment( $id );
 	}
 
 	/**
