@@ -41,28 +41,31 @@ class UpgradeAjaxComments extends Maintenance {
 				$content = $article->getContent( $article );
 
 				// This page ID of the associated content page
-				$page = Title::newFromText( $title->getText(), $title->getNamespace() - 1 )->getArticleID();
-				$this->output( "   Processing talk page with ID $id (associated content page has ID $page)\n" );
+				$page = Title::newFromText( $title->getText(), $title->getNamespace() - 1 );
+				if( $page ) {
+					$page = $page->getArticleID();
+					$this->output( "   Processing talk page with ID $id (associated content page has ID $page)\n" );
 
-				// If this page has AjaxComments data in it's current revision, extract the data,
-				if( $ac = $this->textToData( $content ) ) {
-					$cpages++;
-					foreach( $ac as $k => $v ) {
-						$data[$k] = $v;
-						$data[$k]['talk'] = $id;
-						$data[$k]['page'] = $page;
-						$data[$k]['id'] = count( $data );
-					}
-				
-					// and revert it to it's state prior to AjaxComments, or delete it
-					$rev = Revision::newFromId( $title->getLatestRevID() );
-					do { $rev = $rev->getPrevious(); } while( $rev && strpos( $comment = $rev->getRawComment(), 'AjaxComments' ) !== false );
-					if( $rev ) {
-						$this->output( "      Reverting (talkpage $id) to comment " . $rev->getId() . " (Edit comment: '$comment').\n" );
-						$article->doEdit( $rev->getText(), 'Reverted talkpage to state prior to AJAXCOMMENTS additions', EDIT_UPDATE );
-					} else {
-						$this->output( "      Deleting (talkpage $id) as it has only AjaxComments revisions.\n" );
-						$article->doDelete( 'Deleting talkpage, comments data has been moved into the "ajaxcomments" database table.' );
+					// If this page has AjaxComments data in it's current revision, extract the data,
+					if( $ac = $this->textToData( $content ) ) {
+						$cpages++;
+						foreach( $ac as $k => $v ) {
+							$data[$k] = $v;
+							$data[$k]['talk'] = $id;
+							$data[$k]['page'] = $page;
+							$data[$k]['id'] = count( $data );
+						}
+					
+						// and revert it to it's state prior to AjaxComments, or delete it
+						$rev = Revision::newFromId( $title->getLatestRevID() );
+						do { $rev = $rev->getPrevious(); } while( $rev && strpos( $comment = $rev->getRawComment(), 'AjaxComments' ) !== false );
+						if( $rev ) {
+							$this->output( "      Reverting (talkpage $id) to comment " . $rev->getId() . " (Edit comment: '$comment').\n" );
+							$article->doEdit( $rev->getText(), 'Reverted talkpage to state prior to AJAXCOMMENTS additions', EDIT_UPDATE );
+						} else {
+							$this->output( "      Deleting (talkpage $id) as it has only AjaxComments revisions.\n" );
+							$article->doDelete( 'Deleting talkpage, comments data has been moved into the "ajaxcomments" database table.' );
+						}
 					}
 				}
 			}
