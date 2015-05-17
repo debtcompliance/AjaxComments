@@ -308,7 +308,6 @@ $(document).ready( function() {
 			}
 		}
 		html += '</div></div><div class="replies"></div></div>';
-		if(hash) window.location = '#comment' + c.id;
 		return html;
 	}
 

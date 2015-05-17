@@ -154,11 +154,11 @@ class AjaxComments {
 			break;
 
 			case 'edit':
-				$result = self::edit( $data, $id );
+				$result = self::edit( $data, $page, $id );
 			break;
 
 			case 'del':
-				$result = self::delete( $id );
+				$result = self::delete( $page, $id );
 			break;
 
 			case 'like':
@@ -195,21 +195,17 @@ class AjaxComments {
 			'ac_data' => $text,
 		) );
 		$id = $dbw->insertId();
-
-		// Add a log entry about this activity
-		$title = Title::newFromId( $page );
-		$log = new LogPage( 'ajaxcomments', true );
-		$log->addEntry( 'add', $title, wfMessage( 'ajaxcomments-add-summary', $title->getPrefixedText(), $id )->text(), array( $title->getPrefixedText() ) );
-
+		self::comment( 'add', $page, $id );
 		return self::getComment( $id );
 	}
 
 	/**
 	 * Edit an existing comment in the data structure
 	 */
-	private static function edit( $text, $id ) {
+	private static function edit( $text, $page, $id ) {
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->update( AJAXCOMMENTS_TABLE, array( 'ac_data' => $text ), array( 'ac_id' => $id ) );
+		self::comment( 'edit', $page, $id );
 		return self::getComment( $id );
 	}
 
@@ -230,13 +226,15 @@ class AjaxComments {
 			'ac_time'   => $ts,
 			'ac_data'   => $text,
 		) );
-		return self::getComment( $dbw->insertId() );
+		$id = $dbw->insertId();
+		self::comment( 'reply', $page, $id );
+		return self::getComment( $id );
 	}
 
 	/**
 	 * Delete a comment amd all its replies from the data structure
 	 */
-	private static function delete( $id ) {
+	private static function delete( $page, $id ) {
 		global $wgUser;
 		$dbw = wfGetDB( DB_MASTER );
 
@@ -249,6 +247,7 @@ class AjaxComments {
 		// Delete this comment and all child comments and likes
 		$children = self::children( $id );
 		$dbw->delete( AJAXCOMMENTS_TABLE, 'ac_id IN (' . implode( ',', $children ) . ')' );
+		self::comment( 'del', $page, $id );
 		return $children;
 	}
 
@@ -302,6 +301,14 @@ class AjaxComments {
 			if( $like == 0 ) return wfMessage( 'ajaxcomments-unlike', $name, $cname )->text();
 			else return wfMessage( 'ajaxcomments-dislike', $name, $cname )->text();
 		}
+	}
+
+	// Add a log entry about this activity
+	private static function comment( $type, $page, $id ) {
+		$title = Title::newFromId( $page );
+		$summary = wfMessage( "ajaxcomments-$type-summary", $title->getPrefixedText(), $id )->text();
+		$log = new LogPage( 'ajaxcomments', true );
+		$log->addEntry( $type, $title, $summary, array( $title->getPrefixedText() ) );
 	}
 
 	/**
