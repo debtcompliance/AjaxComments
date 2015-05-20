@@ -1,3 +1,8 @@
+.imageTable {
+	float: left;
+	padding: 2px;
+}
+
 #ajaxcomments textarea {
 	height: 100px;
 }
@@ -21,8 +26,12 @@
 .ajaxcomment.selected {
 	border: 2px solid #c00;
 }
-.ajaxcomments-loader {
+.ajaxcomment-container.loading .loader {
+	padding: 5px 15px;
 	background: url( img/ajax-loader.gif ) no-repeat center center;
+}
+.ajaxcomment-container.loading .replies .loader {
+	background: none;
 }
 .ajaxcomment-new .ajaxcomment-text {
 	height: 80px;

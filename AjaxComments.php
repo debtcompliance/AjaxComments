@@ -141,7 +141,7 @@ class AjaxComments {
 		global $wgOut, $wgRequest;
 		header( 'Content-Type: application/json' );
 		$result = array();
-
+sleep(1);
 		// Perform the command on the talk content
 		switch( $type ) {
 

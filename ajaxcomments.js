@@ -72,15 +72,16 @@ $(document).ready( function() {
 	 * An delete link has been clicked
 	 */
 	function del(idlist, notify) {
-		var i, id, buttons;
+		var i, e, id, buttons;
 		for( i = 0; i < idlist.length; i++ ) {
 			id = idlist[i];
-			buttons = {}, e = $('#ajaxcomment-' + id);
+			e = $('#ajaxcomment-' + id);
+			buttons = {}
 			buttons[mw.message( 'ajaxcomments-yes' ).escaped()] = function() {
 				console.log('AjaxComments: del(' + id + ')');
 
 				// Replace the comment content with a loader
-				$('.ajaxcomment-text:first', e).html('<div class="ajaxcomments-loader"></div>');
+				e.addClass('loading');
 
 				// Submit the delete request
 				$.ajax({
@@ -121,8 +122,9 @@ $(document).ready( function() {
 	 * - the returned response is the new like/dislike links
 	 */
 	function like(id, val) {
-		var target = $('#ajaxcomments-' + id);
+		var e = $('#ajaxcomment-' + id);
 		console.log('AjaxComments: ' + (val < 0 ? 'dis' : '') + 'like(' + id + ')');
+		e.addClass('loading');
 		$.ajax({
 			type: 'GET',
 			url: mw.util.wikiScript(),
@@ -142,22 +144,37 @@ $(document).ready( function() {
 	 * Open a comment input box to add, edit or reply
 	 */
 	function input(type, id) {
-		var html, sel = '#ajaxcomment-' + id;
+		var c, html, sel = '#ajaxcomment-' + id;
 
 		// Cancel any existing inputs
 		cancel();
+		$('#ajaxcomment-new').remove();
 
 		// Hide the no comments message if exists
 		$('#ajaxcomments-none').hide();
 
 		// Build the input with it's submit and cancel buttons
-		var html = '<div id="ajaxcomment-input" class="ajaxcomment-input ' + type + '"><textarea></textarea>';
-		html += '<button class="submit">' + mw.message('ajaxcomments-post').text() + '</button>';
-		html += '<button class="cancel">' + mw.message('ajaxcomments-cancel').text() + '</button>';
-		html += '</div>';
+		html = '<div id="ajaxcomment-input" class="ajaxcomment-input ' + type + '"><textarea></textarea>'
+			+ '<button class="submit">' + mw.message('ajaxcomments-post').text() + '</button>'
+			+ '<button class="cancel">' + mw.message('ajaxcomments-cancel').text() + '</button>'
+			+ '</div>';
 
-		// If replying or adding, surround the input with new comment structure
-		if(type == 'add' || type == 'reply') html = '<div class="ajaxcomment-container" id="ajaxcomment-new"><div class="ajaxcomment">' + html + '</div></div>';
+		// If replying or adding, create a new empty comment structure with the input in it
+		if(type == 'add' || type == 'reply') {
+			html = renderComment({
+				id: 'new',
+				parent: type == 'add' ? null : id,
+				user: user,
+				name: username,
+				time: '',
+				date: '',
+				text: '',
+				html: '',
+				like: [],
+				dislike: [],
+				avatar: false,
+			}, html);
+		};
 
 		// Put the input in the comment in the page
 		if(type == 'add') $('#ajaxcomments-add').after(html);
@@ -166,16 +183,16 @@ $(document).ready( function() {
 			$(sel + ' .replies:first').prepend(html);
 			sel = '#ajaxcomment-new';
 		}
+		if(type == 'add' || type == 'reply') $('#ajaxcomment-new').fadeIn(500);
 
-		// Disable the buttons and hide the text and add the source if editing
-		if(type == 'edit') {
-			$(sel + ' .buttons:first').hide()
-			$(sel + ' .ajaxcomment-text:first').hide();
-			$(sel + ' textarea:first').text(comments[id].text);
-		}
+		// Hide the buttons, avatar and text
+		$(sel + ' .buttons:first').hide()
+
+		// If editing, add the source
+		if(type == 'edit') $(sel + ' textarea:first').text(comments[id].text);
 
 		// Activate the buttons
-		$(sel + ' button.cancel:first').click(function() { cancel(); $('#ajaxcomment-new').remove(); });
+		$(sel + ' button.cancel:first').click(function() { cancel(); $('#ajaxcomment-new').fadeOut(300); });
 		$(sel + ' button.submit:first').data({'id': id, 'type': type}).click(function() {
 			submit( $(this).data('type'), $(this).data('id') );
 		});
@@ -185,7 +202,10 @@ $(document).ready( function() {
 	 * Remove any current comment input box, or new comment
 	 */
 	function cancel() {
-		$('#ajaxcomment-input').remove();
+		if($('#ajaxcomment-new').length > 0) return $('#ajaxcomment-new').fadeOut(300);
+		$('#ajaxcomment-input button').hide();
+		$('#ajaxcomment-input').fadeOut(300);
+		$('.ajaxcomment-icon').show();
 		$('.ajaxcomment-text').show();
 		$('#ajaxcomments .buttons').show();
 		$('#ajaxcomments-none').show();
@@ -198,13 +218,13 @@ $(document).ready( function() {
 		var text, e = $('#ajaxcomment-' + ( type == 'reply' ? 'new' : id ) );
 		console.log('AjaxComments: ' + type + '(' + id + ')');
 
-		// Get the new text from the textarea and clear the input
+		// Get the new text from the textarea and remove it
 		text = $('textarea:first', e).val();
-		cancel();
+		$('.ajaxcomment-input', e).remove();
+		$('.ajaxcomment .buttons').show();
 
-		// Replace the comment content with a loader
-		$('#ajaxcomment-new .ajaxcomment').append('<div class="ajaxcomment-text"></div>');
-		$('.ajaxcomment-text:first', e).html('<div class="ajaxcomments-loader"></div>');
+		// Add a loader
+		e.addClass('loading');
 
 		// Send the command and render the returned data
 		$.ajax({
@@ -225,7 +245,7 @@ $(document).ready( function() {
 	 * - this may be new comments to insert or prepend, or ones that need to be replaced
 	 */
 	function renderComments(data) {
-		var i, sel, c, html;
+		var i, replies, sel, bsel, c, html;
 		
 		// If first render,
 		if($('#ajaxcomments').hasClass('ajaxcomments-loader')) {
@@ -255,12 +275,12 @@ $(document).ready( function() {
 		for( i = 0; i < data.length; i++ ) {
 			c = data[i];
 
-			// If this comment is already rendered, update it
+			// If this comment is already rendered, update it, but preseve the replies
 			sel = '#ajaxcomment-' + c.id;
 			if($(sel).length > 0) {
-				html = $(sel + ' .replies').html()
+				replies = $(sel + ' .replies:first').detach();
 				$(sel).replaceWith(c.rendered);
-				$(sel + ' .replies').html(html);
+				$(sel + ' .replies').append(replies);
 			} else {
 
 				// If it's a reply, insert it at the top of the replies for it's parent
@@ -272,12 +292,13 @@ $(document).ready( function() {
 
 			// Activate it's buttons if the user can comment
 			if(canComment) {
-				$(sel + ' button').data('id', c.id);
-				$(sel + ' .reply').click(function() { input('reply', $(this).data('id')); });
-				$(sel + ' .edit').click(function() { input('edit', $(this).data('id')); });
-				$(sel + ' .del').click(function() { del([$(this).data('id')], true); });
-				if($.inArray(username, c.like) < 0) $(sel + ' .like').css('cursor','pointer').click(function() { like($(this).data('id'), 1); });
-				if($.inArray(username, c.dislike) < 0) $(sel + ' .dislike').css('cursor','pointer').click(function() { like($(this).data('id'), -1); });
+				bsel = sel + ' .ajaxcomment:first';
+				$(bsel + ' button').data('id', c.id);
+				$(bsel + ' .reply').click(function() { input('reply', $(this).data('id')); });
+				$(bsel + ' .edit').click(function() { input('edit', $(this).data('id')); });
+				$(bsel + ' .del').click(function() { del([$(this).data('id')], true); });
+				if($.inArray(username, c.like) < 0) $(bsel + ' .like').css('cursor','pointer').click(function() { like($(this).data('id'), 1); });
+				if($.inArray(username, c.dislike) < 0) $(bsel + ' .dislike').css('cursor','pointer').click(function() { like($(this).data('id'), -1); });
 			}
 		}
 
@@ -288,7 +309,7 @@ $(document).ready( function() {
 	/**
 	 * Render a single comment as HTML (without its replies)
 	 */
-	function renderComment(c) {
+	function renderComment(c, input) {
 		var hash = window.location.hash == '#comment' + c.id ? ' selected' : '';                                            // Make this comment selected if t's ID is in the # fragment
 		var ulink = '<a href="' + mw.util.getUrl('User:' + c.name) + '" title="' + c.name + '">' + c.name + '</a>';         // Link to user page
 		var html = '<div class="ajaxcomment-container" id="ajaxcomment-' + c.id + '">'
@@ -296,6 +317,7 @@ $(document).ready( function() {
 			+ '<div class="ajaxcomment-sig">' + mw.message('ajaxcomments-sig', ulink, c.date ).text() + '</div>'            // Signature
 			+ ( c.avatar ? '<div class="ajaxcomment-icon"><img src="' + c.avatar + '" alt="' + c.name + '" /></div>' : '' ) // Avatar
 			+ '<div class="ajaxcomment-text">' + c.html + '</div>'                                                          // Comment body
+			+ ( input === undefined ? '' : input )                                                                          // if a text input was supplied add it here
 			+ '<div class="buttons">'
 			+ likeButton(c, 'like') + likeButton(c, 'dislike');                                                             // Like and dislike buttons
 
@@ -307,7 +329,7 @@ $(document).ready( function() {
 					+ '<button class="del">' + mw.message('ajaxcomments-del').text() + '</button>';
 			}
 		}
-		html += '</div></div><div class="replies"></div></div>';
+		html += '<span class="loader"></span></div></div><div class="replies"></div></div>';
 		return html;
 	}
 
