@@ -4,7 +4,7 @@
  *
  * @file
  * @ingroup Extensions
- * @author Aran Dunkley [http://www.organicdesign.co.nz/nad User:Nad]
+ * @author Aran Dunkley [http://www.organicdesign.co.nz/aran Aran Dunkley]
  * @copyright © 2012-2015 Aran Dunkley
  * @licence GNU General Public Licence 2.0 or later
  * 
@@ -36,7 +36,7 @@ $wgAjaxExportList[] = 'AjaxComments::ajax';
 $wgExtensionCredits['other'][] = array(
 	'path'        => __FILE__,
 	'name'        => 'AjaxComments',
-	'author'      => '[http://www.organicdesign.co.nz/User:Nad Aran Dunkley]',
+	'author'      => '[http://www.organicdesign.co.nz/aran Aran Dunkley]',
 	'url'         => 'http://www.mediawiki.org/wiki/Extension:AjaxComments',
 	'description' => 'Add comments to the end of the page that can be edited, deleted or replied to instead of using the talk pages',
 	'version'     => AJAXCOMMENTS_VERSION
