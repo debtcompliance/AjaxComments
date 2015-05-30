@@ -16,6 +16,9 @@ $(document).ready( function() {
 	// Is the user allowed to add comments/edit etc?
 	var canComment = mw.config.get('ajaxCommentsCanComment');
 
+	// Are we using like/dislike links?
+	var likeDislike = mw.config.get('ajaxCommentsLikeDislike');
+
 	// Remember latest comment received
 	var timestamp = 0;
 
@@ -319,7 +322,7 @@ $(document).ready( function() {
 			+ '<div class="ajaxcomment-text">' + c.html + '</div>'                                                          // Comment body
 			+ ( input === undefined ? '' : input )                                                                          // if a text input was supplied add it here
 			+ '<div class="buttons">'
-			+ likeButton(c, 'like') + likeButton(c, 'dislike');                                                             // Like and dislike buttons
+			+ likeDislike ? likeButton(c, 'like') + likeButton(c, 'dislike') : '';                                          // Like and dislike buttons
 
 		// Add reply and edit/del buttons if user can comment and has right to edit this comment
 		if(canComment) {

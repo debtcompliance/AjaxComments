@@ -56,7 +56,7 @@ class AjaxComments {
 	}
 
 	public function setup() {
-		global $wgOut, $wgResourceModules, $wgAjaxCommentsPollServer, $wgExtensionAssetsPath, $wgUser;
+		global $wgOut, $wgResourceModules, $wgAjaxCommentsPollServer, $wgAjaxCommentsLikeDislike, $wgExtensionAssetsPath, $wgUser;
 
 		// Create a hook to allow external condition for whether there should be comments shown
 		$title = array_key_exists( 'title', $_GET ) ? Title::newFromText( $_GET['title'] ) : false;
@@ -113,6 +113,7 @@ class AjaxComments {
 		$wgOut->addStyle( "$path/ajaxcomments.css" );
 		$wgOut->addJsConfigVars( 'ajaxCommentsPollServer', $wgAjaxCommentsPollServer );
 		$wgOut->addJsConfigVars( 'ajaxCommentsCanComment', $this->canComment );
+		$wgOut->addJsConfigVars( 'ajaxCommentsLikeDislike', $wgAjaxCommentsLikeDislike );
 	}
 
 	/**
