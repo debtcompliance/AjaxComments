@@ -322,7 +322,7 @@ $(document).ready( function() {
 			+ '<div class="ajaxcomment-text">' + c.html + '</div>'                                                          // Comment body
 			+ ( input === undefined ? '' : input )                                                                          // if a text input was supplied add it here
 			+ '<div class="buttons">'
-			+ likeDislike ? likeButton(c, 'like') + likeButton(c, 'dislike') : '';                                          // Like and dislike buttons
+			+ ( likeDislike ? likeButton(c, 'like') + likeButton(c, 'dislike') : '' );                                      // Like and dislike buttons
 
 		// Add reply and edit/del buttons if user can comment and has right to edit this comment
 		if(canComment) {
