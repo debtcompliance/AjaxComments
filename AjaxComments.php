@@ -368,7 +368,7 @@ sleep(1);
 			'like'    => $likes,
 			'dislike' => $dislikes,
 			'avatar'  => $wgAjaxCommentsAvatars && $user->isEmailConfirmed()
-				? "http://www.gravatar.com/avatar/" . md5( strtolower( $user->getEmail() ) ) . "?s=50&d=wavatar" : false
+				? "https://www.gravatar.com/avatar/" . md5( strtolower( $user->getEmail() ) ) . "?s=50&d=wavatar" : false
 		);
 	}
 

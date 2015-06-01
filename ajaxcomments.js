@@ -1,5 +1,7 @@
 $(document).ready( function() {
 
+	"use strict";
+
 	// Client copy of all comments on this page
 	var comments = {};
 	var count = 0;
