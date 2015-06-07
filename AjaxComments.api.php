@@ -60,7 +60,7 @@ class ApiAjaxComments extends ApiBase {
 	}
 
 	public function mustBePosted() {
-		return false;
+		return true;
 	}
 
 	public function getAllowedParams( $flags = 0 ) {
