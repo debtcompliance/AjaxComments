@@ -13,7 +13,7 @@
  */
 if( !defined( 'MEDIAWIKI' ) ) die( 'Not an entry point.' );
 
-define( 'AJAXCOMMENTS_VERSION', '2.0.0, 2015-05-01' );
+define( 'AJAXCOMMENTS_VERSION', '2.1.0, 2015-06-07' );
 define( 'AJAXCOMMENTS_TABLE', 'ajaxcomments' );
 define( 'AJAXCOMMENTS_DATATYPE_COMMENT', 1 );
 define( 'AJAXCOMMENTS_DATATYPE_LIKE', 2 );
@@ -31,8 +31,6 @@ $wgLogActions['ajaxcomments/reply'] = 'ajaxcomments-reply-desc';
 $wgLogActions['ajaxcomments/edit']  = 'ajaxcomments-edit-desc';
 $wgLogActions['ajaxcomments/del']   = 'ajaxcomments-del-desc';
 
-$wgAjaxExportList[] = 'AjaxComments::ajax';
-
 $wgExtensionCredits['other'][] = array(
 	'path'        => __FILE__,
 	'name'        => 'AjaxComments',
@@ -43,6 +41,8 @@ $wgExtensionCredits['other'][] = array(
 );
 
 $wgExtensionMessagesFiles['AjaxComments'] = __DIR__ . '/AjaxComments.i18n.php';
+$wgAutoloadClasses['ApiAjaxComments'] = __DIR__ . '/AjaxComments.api.php';
+$wgAPIModules['ajaxcomments'] = 'ApiAjaxComments';
 
 class AjaxComments {
 
@@ -136,56 +136,9 @@ class AjaxComments {
 	}
 
 	/**
-	 * Process the Ajax requests
-	 */
-	public static function ajax( $type, $page, $id = 0, $data = '' ) {
-		global $wgOut, $wgRequest;
-		header( 'Content-Type: application/json' );
-		$result = array();
-sleep(1);
-		// Perform the command on the talk content
-		switch( $type ) {
-
-			case 'add':
-				$result = self::add( $data, $page );
-			break;
-
-			case 'reply':
-				$result = self::reply( $data, $page, $id );
-			break;
-
-			case 'edit':
-				$result = self::edit( $data, $page, $id );
-			break;
-
-			case 'del':
-				$result = self::delete( $page, $id );
-			break;
-
-			case 'like':
-				$msg = self::like( $data, $id );
-				$comment = self::getComment( $id );
-				$result = array(
-					'like' => $comment['like'],
-					'dislike' => $comment['dislike']
-				);
-			break;
-
-			case 'get':
-				$result = self::getComments( $page, $id );
-			break;
-
-			default:
-				$result['error'] = "unknown action";
-		}
-
-		return json_encode( $result );
-	}
-
-	/**
 	 * Add a new comment to the data structure, return it's insert ID
 	 */
-	private static function add( $text, $page ) {
+	public static function add( $text, $page ) {
 		global $wgUser;
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->insert( AJAXCOMMENTS_TABLE, array(
@@ -203,7 +156,7 @@ sleep(1);
 	/**
 	 * Edit an existing comment in the data structure
 	 */
-	private static function edit( $text, $page, $id ) {
+	public static function edit( $text, $page, $id ) {
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->update( AJAXCOMMENTS_TABLE, array( 'ac_data' => $text ), array( 'ac_id' => $id ) );
 		self::comment( 'edit', $page, $id );
@@ -214,7 +167,7 @@ sleep(1);
 	 * Add a new comment as a reply to an existing comment in the data structure
 	 * - return the new comment in client-ready format
 	 */
-	private static function reply( $text, $page, $parent ) {
+	public static function reply( $text, $page, $parent ) {
 		global $wgUser;
 		$uid = $wgUser->getId();
 		$ts = time();
@@ -235,7 +188,7 @@ sleep(1);
 	/**
 	 * Delete a comment amd all its replies from the data structure
 	 */
-	private static function delete( $page, $id ) {
+	public static function delete( $page, $id ) {
 		global $wgUser;
 		$dbw = wfGetDB( DB_MASTER );
 
@@ -255,7 +208,7 @@ sleep(1);
 	/**
 	 * Like/unlike a comment returning a message describing the change
 	 */
-	private static function like( $val, $id ) {
+	public static function like( $val, $id ) {
 		global $wgUser;
 		$dbw = wfGetDB( DB_MASTER );
 		$row = $dbw->selectRow( AJAXCOMMENTS_TABLE, 'ac_user', array( 'ac_id' => $id ) );
@@ -327,7 +280,7 @@ sleep(1);
 	 * Return the passed comment in client-ready format
 	 * - row can be a comment id or a db row structure
 	 */
-	private static function getComment( $row ) {
+	public static function getComment( $row ) {
 		global $wgLang, $wgAjaxCommentsAvatars;
 		$likes = $dislikes = array();
 		$dbr = wfGetDB( DB_SLAVE );
@@ -375,7 +328,7 @@ sleep(1);
 	/**
 	 * Get comments for passed page greater than passed timestamp in a client-ready format
 	 */
-	private static function getComments( $page, $ts = false ) {
+	public static function getComments( $page, $ts = false ) {
 
 		// Query DB for all comments and likes for the page (after ts if supplied)
 		$cond = array( 'ac_type' => AJAXCOMMENTS_DATATYPE_COMMENT, 'ac_page' => $page );

@@ -34,7 +34,17 @@ $(document).ready( function() {
 
 	// Get the Ajax polling rate (-1 means comments are disabled for this page)
 	var poll = mw.config.get('ajaxCommentsPollServer');
-	if(poll < 0) return;
+
+	// Most of the ajax request data is the same for all requests
+	var request = {
+		type: 'POST',
+		url: mw.util.wikiScript('api'),
+		data: {
+			action: 'ajaxcomments',
+			format: 'json',
+		},
+		dataType: 'json',
+	};
 
 	// If the comments area has been added, create a div for the comments to render into with a loader in it
 	if($('#ajaxcomments-name').length > 0) {
@@ -60,16 +70,14 @@ $(document).ready( function() {
 	 * Ask the server for the rendered comments on a regular intervale (unless WebSocket connected)
 	 */
 	function updateComments() {
-		$.ajax({
-			type: 'GET',
-			url: mw.util.wikiScript(),
-			data: { action: 'ajax', rs: 'AjaxComments::ajax', rsargs: ['get', page, timestamp] },
-			dataType: 'json',
-			success: function(data) {
-				renderComments(data);
-			}
-		}).then(function() {
-			if(!(typeof webSocket === 'object' && webSocket.connected())) setTimeout(updateComments, poll * 1000);
+		request.data.type = 'get';
+		request.data.page = page;
+		request.data.id = timestamp;
+		request.success = function(json) {
+			renderComments(json.ajaxcomments);
+		};
+		$.ajax(request).then(function() {
+			if(!(typeof webSocket === 'object' && webSocket.connected()) && poll > 0 ) setTimeout(updateComments, poll * 1000);
 		});
 	}
 
@@ -89,26 +97,25 @@ $(document).ready( function() {
 				e.addClass('loading');
 
 				// Submit the delete request
-				$.ajax({
-					type: 'POST',
-					url: mw.util.wikiScript(),
-					data: { action: 'ajax', rs: 'AjaxComments::ajax', rsargs: ['del', page, id] },
-					dataType: 'json',
-					success: function(data) {
+				request.data.type = 'del';
+				request.data.page = page;
+				request.data.id = id;
+				request.success = function(json) {
+					var data = json.ajaxcomments;
 
-						// Delete the this comment's visual element (which contains all replies)
-						e.fadeOut(500);
+					// Delete the this comment's visual element (which contains all replies)
+					e.fadeOut(500);
 
-						// Delete the returned ID's from the local comments data store
-						for( i = 0; i < data.length; i++ ) delete(comments[data[i]]);
+					// Delete the returned ID's from the local comments data store
+					for( i = 0; i < data.length; i++ ) delete(comments[data[i]]);
 
-						// If no comments, add message
-						noComments();
+					// If no comments, add message
+					noComments();
 
-						// If notify set, send this id list via WebSocket
-						if(ws && notify) webSocket.send(wsDelete, data);
-					}
-				});
+					// If notify set, send this id list via WebSocket
+					if(ws && notify) webSocket.send(wsDelete, data);
+				};
+				$.ajax(request);
 				$(this).dialog('close');
 			 };
 			buttons[mw.message( 'ajaxcomments-cancel' ).escaped()] = function() { $(this).dialog('close'); };
@@ -130,19 +137,19 @@ $(document).ready( function() {
 		var e = $('#ajaxcomment-' + id);
 		console.log('AjaxComments: ' + (val < 0 ? 'dis' : '') + 'like(' + id + ')');
 		e.addClass('loading');
-		$.ajax({
-			type: 'GET',
-			url: mw.util.wikiScript(),
-			data: { action: 'ajax', rs: 'AjaxComments::ajax', rsargs: ['like', page, id, val] },
-			dataType: 'json',
-			success: function(data) {
-				var c = comments[id];
-				c['like'] = data.like;
-				c['dislike'] = data.dislike;
-				renderComments([c]);
-				if(ws) webSocket.send(wsAjaxCommentsRender, [id]);
-			}
-		});
+		request.data.type = 'like';
+		request.data.page = page;
+		request.data.id = id;
+		request.data.data = val;
+		request.success = function(json) {
+			var data = json.ajaxcomments;
+			var c = comments[id];
+			c['like'] = data.like;
+			c['dislike'] = data.dislike;
+			renderComments([c]);
+			if(ws) webSocket.send(wsAjaxCommentsRender, [id]);
+		};
+		$.ajax(request);
 	}
 
 	/**
@@ -232,17 +239,17 @@ $(document).ready( function() {
 		e.addClass('loading');
 
 		// Send the command and render the returned data
-		$.ajax({
-			type: 'POST',
-			url: mw.util.wikiScript(),
-			data: { action: 'ajax', rs: 'AjaxComments::ajax', rsargs: [type, page, id, text] },
-			dataType: 'json',
-			success: function(data) {
-				$('#ajaxcomment-new').remove();
-				renderComments([data]);
-				if(ws) webSocket.send(wsRender, [data]);
-			}
-		});
+		request.data.type = type;
+		request.data.page = page;
+		request.data.id = id;
+		request.data.data = text;
+		request.success = function(json) {
+			var data = json.ajaxcomments;
+			$('#ajaxcomment-new').remove();
+			renderComments([data]);
+			if(ws) webSocket.send(wsRender, [data]);
+		};
+		$.ajax(request);
 	}
 
 	/**
