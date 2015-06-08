@@ -85,18 +85,4 @@ class ApiAjaxComments extends ApiBase {
 	public function getHelpUrls() {
 		return 'https://www.mediawiki.org/wiki/Extension:AjaxComments';
 	}
-
-	/**
-	 * Process the Ajax requests
-	 */
-	public static function ajax( $type, $page, $id = 0, $data = '' ) {
-		global $wgOut, $wgRequest;
-		header( 'Content-Type: application/json' );
-		$result = array();
-
-		// Perform the command on the talk content
-
-
-		return json_encode( $result );
-	}
 }
