@@ -15,7 +15,6 @@ class ApiAjaxComments extends ApiBase {
 		$data   = array_key_exists( 'data', $params ) ? $params['data'] : '';
 
 		// Process the request
-		$result = array();
 		switch( $type ) {
 
 			case 'add':
@@ -48,7 +47,7 @@ class ApiAjaxComments extends ApiBase {
 			break;
 
 			default:
-				$result['error'] = "unknown action";
+				$result = array( 'error' => 'unknown action' );
 		}
 
 		// Return the result data
