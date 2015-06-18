@@ -38,7 +38,7 @@ class UpgradeAjaxComments extends Maintenance {
 			if( $title->exists() ) {
 				$pages++;
 				$article = new Article( $title );
-				$content = $article->getContent( $article );
+				$content = $article->getPage()->getContent()->getNativeData();
 
 				// This page ID of the associated content page
 				$page = Title::newFromText( $title->getText(), $title->getNamespace() - 1 );
