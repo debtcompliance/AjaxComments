@@ -40,7 +40,7 @@ $wgExtensionCredits['other'][] = array(
 	'version'     => AJAXCOMMENTS_VERSION
 );
 
-$wgExtensionMessagesFiles['AjaxComments'] = __DIR__ . '/AjaxComments.i18n.php';
+$wgMessagesDirs['AjaxComments'] = __DIR__ . '/i18n';
 $wgAutoloadClasses['ApiAjaxComments'] = __DIR__ . '/AjaxComments.api.php';
 $wgAPIModules['ajaxcomments'] = 'ApiAjaxComments';
 

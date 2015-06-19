@@ -1,0 +1,37 @@
+{
+	"@metadata": {
+		"authors": [
+			"Aran Dunkley"
+		]
+	},
+	"ajaxcomments-heading": "Comentários",
+	"ajaxcomments-comment": "$1 comentário",
+	"ajaxcomments-comments": "$1 comentários",
+	"ajaxcomments-none": "Não há comentários sobre esta página",
+	"ajaxcomments-anon": "Cadastre-se ou faça login para postar comentários",
+	"ajaxcomments-sig": "Postado por $1 às $2",
+	"ajaxcomments-add": "Adicionar comentário",
+	"ajaxcomments-edit": "Editar",
+	"ajaxcomments-reply": "Responder",
+	"ajaxcomments-del": "Apagar",
+	"ajaxcomments-confirmdel": "Tem certeza de que deseja remover este comentário?",
+	"ajaxcomments-confirm": "Confirmar",
+	"ajaxcomments-yes": "Sim",
+	"ajaxcomments-post": "Postar",
+	"ajaxcomments-cancel": "Cancelar",
+	"ajaxcomments-add-summary": "Comentário adicionado usando a extensão AjaxComments",
+	"ajaxcomments-reply-summary": "Responder comentário feito usando a extensão AjaxComments",
+	"ajaxcomments-edit-summary": "Comentário editado usando a extensão AjaxComments",
+	"ajaxcomments-del-summary": "Comentário apagado usando a extensão AjaxComments",
+	"ajaxcomments-talkdeleted": "Último comentário removido, página de discussão excluído",
+	"ajaxcomments-like": "$1 gosta comentário de $2",
+	"ajaxcomments-dislike": "$1 não gosta comentário de $2",
+	"ajaxcomments-unlike": "$1 já não gosta comentário de $2",
+	"ajaxcomments-undislike": "$1 já não não gosta comentário de $2",
+	"ajaxcomments-nolike": "Ninguém gosta este comentário",
+	"ajaxcomments-onelike": "$1 gosta este comentário",
+	"ajaxcomments-manylike": "$1 e $2 gosta este comentário",
+	"ajaxcomments-nodislike": "Ninguém não gosta este comentário",
+	"ajaxcomments-onedislike": "$1 não gosta este comentário",
+	"ajaxcomments-manydislike": "$1 e $2 não gosta este comentário"
+}
