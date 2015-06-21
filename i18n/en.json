@@ -4,6 +4,7 @@
 			"Aran Dunkley"
 		]
 	},
+	"ajaxcomments-desc": "Add comments to the end of the page that can be edited, deleted or replied to instead of using the talk pages",
 	"ajaxcomments-heading": "Comments",
 	"ajaxcomments-comment": "$1 comment",
 	"ajaxcomments-comments": "$1 comments",

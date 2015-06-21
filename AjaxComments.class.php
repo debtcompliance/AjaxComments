@@ -1,62 +1,41 @@
 <?php
-/**
- * AjaxComments extension - Add comments to the end of the page that can be edited, deleted or replied to instead of using the talk pages
- *
- * @file
- * @ingroup Extensions
- * @author Aran Dunkley [http://www.organicdesign.co.nz/aran Aran Dunkley]
- * @copyright © 2012-2015 Aran Dunkley
- * @licence GNU General Public Licence 2.0 or later
- * 
- * Version 2.0 (started on 2015-05-01) stores comments in the DB and leaves the talk page alone, comment rendering is done via JS
- * 
- */
-if( !defined( 'MEDIAWIKI' ) ) die( 'Not an entry point.' );
-
-define( 'AJAXCOMMENTS_VERSION', '2.1.1, 2015-06-18' );
-define( 'AJAXCOMMENTS_TABLE', 'ajaxcomments' );
-define( 'AJAXCOMMENTS_DATATYPE_COMMENT', 1 );
-define( 'AJAXCOMMENTS_DATATYPE_LIKE', 2 );
-
-$wgAjaxCommentsLikeDislike = true;        // add a like/dislike link to each comment
-$wgAjaxCommentsAvatars = true;            // use the gravatar service for users icons
-$wgAjaxCommentsPollServer = 0;            // poll the server to see if any changes to comments have been made and update if so
-
-// Add a new log type
-$wgLogTypes[]                       = 'ajaxcomments';
-$wgLogNames['ajaxcomments']         = 'ajaxcomments-logpage';
-$wgLogHeaders['ajaxcomments']       = 'ajaxcomments-logpagetext';
-$wgLogActions['ajaxcomments/add']   = 'ajaxcomments-add-desc';
-$wgLogActions['ajaxcomments/reply'] = 'ajaxcomments-reply-desc';
-$wgLogActions['ajaxcomments/edit']  = 'ajaxcomments-edit-desc';
-$wgLogActions['ajaxcomments/del']   = 'ajaxcomments-del-desc';
-
-$wgExtensionCredits['other'][] = array(
-	'path'        => __FILE__,
-	'name'        => 'AjaxComments',
-	'author'      => '[http://www.organicdesign.co.nz/aran Aran Dunkley]',
-	'url'         => 'http://www.mediawiki.org/wiki/Extension:AjaxComments',
-	'description' => 'Add comments to the end of the page that can be edited, deleted or replied to instead of using the talk pages',
-	'version'     => AJAXCOMMENTS_VERSION
-);
-
-$wgMessagesDirs['AjaxComments'] = __DIR__ . '/i18n';
-$wgAutoloadClasses['ApiAjaxComments'] = __DIR__ . '/AjaxComments.api.php';
-$wgAPIModules['ajaxcomments'] = 'ApiAjaxComments';
-
 class AjaxComments {
+
+	public static $instance = null;
 
 	private $comments = array();
 	private $talk = false;
 	private $canComment = false;
 
-	function __construct() {
-		global $wgExtensionFunctions;
-		$wgExtensionFunctions[] = array( $this, 'setup' );
+	public static function onLoad() {
+		global $wgLogTypes, $wgLogNames, $wgLogHeaders, $wgLogActions, $wgAPIModules, $wgExtensionFunctions;
+
+		// Constants
+		define( 'AJAXCOMMENTS_TABLE', 'ajaxcomments' );
+		define( 'AJAXCOMMENTS_DATATYPE_COMMENT', 1 );
+		define( 'AJAXCOMMENTS_DATATYPE_LIKE', 2 );
+
+		// Add a new log type
+		$wgLogTypes[]                       = 'ajaxcomments';
+		$wgLogNames['ajaxcomments']         = 'ajaxcomments-logpage';
+		$wgLogHeaders['ajaxcomments']       = 'ajaxcomments-logpagetext';
+		$wgLogActions['ajaxcomments/add']   = 'ajaxcomments-add-desc';
+		$wgLogActions['ajaxcomments/reply'] = 'ajaxcomments-reply-desc';
+		$wgLogActions['ajaxcomments/edit']  = 'ajaxcomments-edit-desc';
+		$wgLogActions['ajaxcomments/del']   = 'ajaxcomments-del-desc';
+
+		// Instantiate a singleton instance
+		self::$instance = new self();
+
+		// Register our ajax handler
+		$wgAPIModules['ajaxcomments'] = 'ApiAjaxComments';
+
+		// Call us at extension setup time
+		$wgExtensionFunctions[] = array( self::$instance, 'setup' );
 	}
 
 	public function setup() {
-		global $wgOut, $wgResourceModules, $wgAjaxCommentsPollServer, $wgAjaxCommentsLikeDislike, $wgExtensionAssetsPath, $wgUser;
+		global $wgOut, $wgResourceModules, $wgAjaxCommentsPollServer, $wgAjaxCommentsLikeDislike, $wgAutoloadClasses, $wgExtensionAssetsPath, $IP, $wgUser;
 
 		// Create a hook to allow external condition for whether there should be comments shown
 		$title = array_key_exists( 'title', $_GET ) ? Title::newFromText( $_GET['title'] ) : false;
@@ -81,36 +60,13 @@ class AjaxComments {
 			}
 		}
 
-		// Set up JavaScript and CSS resources
-		$path = $wgExtensionAssetsPath . '/' . basename( __DIR__ );
-		$wgResourceModules['ext.ajaxcomments'] = array(
-			'scripts'        => array( 'ajaxcomments.js' ),
-			'dependencies'   => array( 'jquery.ui.dialog' ),
-			'localBasePath'  => __DIR__,
-			'remoteBasePath' => $path,
-			'messages' => array(
-				'ajaxcomments-add',
-				'ajaxcomments-edit',
-				'ajaxcomments-reply',
-				'ajaxcomments-del',
-				'ajaxcomments-none',
-				'ajaxcomments-anon',
-				'ajaxcomments-sig',
-				'ajaxcomments-confirmdel',
-				'ajaxcomments-confirm',
-				'ajaxcomments-yes',
-				'ajaxcomments-post',
-				'ajaxcomments-cancel',
-				'ajaxcomments-nolike',
-				'ajaxcomments-onelike',
-				'ajaxcomments-manylike',
-				'ajaxcomments-nodislike',
-				'ajaxcomments-onedislike',
-				'ajaxcomments-manydislike',
-			),
-		);
+		// This gets the remote path even if it's a symlink (MW1.25+)
+		$path = $wgExtensionAssetsPath . str_replace( "$IP/extensions", '', dirname( $wgAutoloadClasses[__CLASS__] ) );
+		$wgResourceModules['ext.ajaxcomments']['remoteExtPath'] = $path;
 		$wgOut->addModules( 'ext.ajaxcomments' );
-		$wgOut->addStyle( "$path/ajaxcomments.css" );
+		$wgOut->addStyle( "$path/styles/ajaxcomments.css" );
+
+		// Add config vars to client side
 		$wgOut->addJsConfigVars( 'ajaxCommentsPollServer', $wgAjaxCommentsPollServer );
 		$wgOut->addJsConfigVars( 'ajaxCommentsCanComment', $this->canComment );
 		$wgOut->addJsConfigVars( 'ajaxCommentsLikeDislike', $wgAjaxCommentsLikeDislike );
@@ -358,5 +314,3 @@ class AjaxComments {
 		return $parser->parse( $text, $title, $options, true, true )->getText();
 	}
 }
-
-new AjaxComments();

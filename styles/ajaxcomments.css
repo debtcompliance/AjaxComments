@@ -23,7 +23,7 @@
 }
 .ajaxcomment-container.loading .loader {
 	padding: 5px 15px;
-	background: url( img/ajax-loader.gif ) no-repeat center center;
+	background: url( ../img/ajax-loader.gif ) no-repeat center center;
 }
 .ajaxcomment-container.loading .replies .loader {
 	background: none;
@@ -65,8 +65,8 @@
 	cursor: default;
 }
 .ajaxcomment .like {
-	background: url( img/thumb_up.png ) no-repeat 4px 0px;
+	background: url( ../img/thumb_up.png ) no-repeat 4px 0px;
 }
 .ajaxcomment .dislike {
-	background: url( img/thumb_down.png ) no-repeat 4px 3px;
+	background: url( ../img/thumb_down.png ) no-repeat 4px 3px;
 }
