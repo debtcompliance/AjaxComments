@@ -7,7 +7,7 @@ class AjaxComments {
 	private $talk = false;
 	private $canComment = false;
 
-	public static function onLoad() {
+	public static function onRegistration() {
 		global $wgLogTypes, $wgLogNames, $wgLogHeaders, $wgLogActions, $wgAPIModules, $wgExtensionFunctions;
 
 		// Constants
