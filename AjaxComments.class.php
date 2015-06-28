@@ -52,9 +52,10 @@ class AjaxComments {
 			$ret = true;
 			Hooks::run( 'AjaxCommentsCheckTitle', array( $title, &$ret ) );
 			if( $ret ) {
+				global $mediawiki;
 				$wgOut->disable();
 				wfResetOutputBuffers();
-				MediaWiki::restInPeace();
+				$mediawiki->restInPeace();
 				$url = $title->getLocalUrl();
 				header( "Location: $url#ajaxcomments" );
 				exit;
