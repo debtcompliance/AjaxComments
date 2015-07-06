@@ -55,7 +55,7 @@ class AjaxComments {
 				global $mediaWiki;
 				$wgOut->disable();
 				wfResetOutputBuffers();
-				$mediaWiki->restInPeace();
+				if( is_object( $mediaWiki ) ) $mediaWiki->restInPeace();
 				$url = $title->getLocalUrl();
 				header( "Location: $url#ajaxcomments" );
 				exit;
