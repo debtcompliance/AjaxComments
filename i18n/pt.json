@@ -33,5 +33,6 @@
 	"ajaxcomments-manylike": "$1 e $2 gosta este comentário",
 	"ajaxcomments-nodislike": "Ninguém não gosta este comentário",
 	"ajaxcomments-onedislike": "$1 não gosta este comentário",
-	"ajaxcomments-manydislike": "$1 e $2 não gosta este comentário"
+	"ajaxcomments-manydislike": "$1 e $2 não gosta este comentário",
+	"ajaxcomments-movetalkpagecontent": "Novo página discussão trocando para um a comentário de AjaxComments"
 }

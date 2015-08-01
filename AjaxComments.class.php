@@ -57,9 +57,13 @@ class AjaxComments {
 			if( $wgAjaxCommentsCopyTalkpages ) {
 				$userpageid = $userpage->getArticleID();
 				if( $title->exists() && $userpageid ) {
+					$article = new Article( $title );
 					$content = $article->getPage()->getContent();
-					if( is_object( $content ) ) $content->getNativeData();
-					if( $content ) self::add( $content, $userpageid, 1 );
+					if( is_object( $content ) ) $content = $content->getNativeData();
+					if( $content ) {
+						self::add( $content, $userpageid, 1 );
+						$article->doDelete( wfMessage( 'ajaxcomments-movetalkpagecontent' )->text() );
+					}
 				}
 			}
 
@@ -68,11 +72,12 @@ class AjaxComments {
 			Hooks::run( 'AjaxCommentsCheckTitle', array( $userpage, &$ret ) );
 			if( $ret ) {
 				global $mediaWiki;
+				if( is_object( $mediaWiki ) ) $mediaWiki->restInPeace();
 				$wgOut->disable();
 				wfResetOutputBuffers();
-				if( is_object( $mediaWiki ) ) $mediaWiki->restInPeace();
 				$url = $userpage->getLocalUrl();
 				header( "Location: $url#ajaxcomments" );
+				wfDebugLog( __CLASS__, "Redirecting to $url" );
 				exit;
 			}
 		}
@@ -122,6 +127,7 @@ class AjaxComments {
 			'ac_data' => $text,
 		) );
 		$id = $dbw->insertId();
+		wfDebugLog( __CLASS__, AJAXCOMMENTS_TABLE );
 		self::comment( 'add', $page, $id );
 		return self::getComment( $id );
 	}

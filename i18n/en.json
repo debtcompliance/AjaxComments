@@ -40,5 +40,6 @@
 	"ajaxcomments-manylike": "$1 and $2 like this comment",
 	"ajaxcomments-nodislike": "Nobody dislikes this comment",
 	"ajaxcomments-onedislike": "$1 dislikes this comment",
-	"ajaxcomments-manydislike": "$1 and $2 dislike this comment"
+	"ajaxcomments-manydislike": "$1 and $2 dislike this comment",
+	"ajaxcomments-movetalkpagecontent": "New talkpage content moved to an AjaxComment"
 }
