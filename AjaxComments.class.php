@@ -35,7 +35,8 @@ class AjaxComments {
 	}
 
 	public function setup() {
-		global $wgOut, $wgResourceModules, $wgAjaxCommentsPollServer, $wgAjaxCommentsLikeDislike, $wgAutoloadClasses, $wgExtensionAssetsPath, $IP, $wgUser;
+		global $wgOut, $wgResourceModules, $wgAutoloadClasses, $wgExtensionAssetsPath, $IP, $wgUser,
+			$wgAjaxCommentsPollServer, $wgAjaxCommentsLikeDislike, $wgAjaxCommentsCopyTalkpages;
 
 		// Create a hook to allow external condition for whether there should be comments shown
 		$title = array_key_exists( 'title', $_GET ) ? Title::newFromText( $_GET['title'] ) : false;
@@ -47,16 +48,30 @@ class AjaxComments {
 		Hooks::run( 'AjaxCommentsCheckWritable', array( $title, &$this->canComment ) );
 
 		// Redirect talk pages with AjaxComments to the comments
-		if( is_object( $title ) && $title->getNamespace() > 0 && ($title->getNamespace()&1) ) {
-			$title = Title::newFromText( $title->getText(), $title->getNamespace() - 1 );
+		if( is_object( $title ) && $title->getNamespace() > 0 && ( $title->getNamespace()&1 ) ) {
+
+			// Get the associated user page
+			$userpage = Title::newFromText( $title->getText(), $title->getNamespace() - 1 );
+
+			// Before redirecting check if the talk page exists and make into an Ajax comment (if config option set)
+			if( $wgAjaxCommentsCopyTalkpages ) {
+				$userpageid = $userpage->getArticleID();
+				if( $title->exists() && $userpageid ) {
+					$content = $article->getPage()->getContent();
+					if( is_object( $content ) ) $content->getNativeData();
+					if( $content ) self::add( $content, $userpageid, 1 );
+				}
+			}
+
+			// Do the redirect
 			$ret = true;
-			Hooks::run( 'AjaxCommentsCheckTitle', array( $title, &$ret ) );
+			Hooks::run( 'AjaxCommentsCheckTitle', array( $userpage, &$ret ) );
 			if( $ret ) {
 				global $mediaWiki;
 				$wgOut->disable();
 				wfResetOutputBuffers();
 				if( is_object( $mediaWiki ) ) $mediaWiki->restInPeace();
-				$url = $title->getLocalUrl();
+				$url = $userpage->getLocalUrl();
 				header( "Location: $url#ajaxcomments" );
 				exit;
 			}
