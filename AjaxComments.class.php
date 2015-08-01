@@ -111,7 +111,7 @@ class AjaxComments {
 	/**
 	 * Add a new comment to the data structure, return it's insert ID
 	 */
-	public static function add( $text, $page, $user == false ) {
+	public static function add( $text, $page, $user = false ) {
 		global $wgUser;
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->insert( AJAXCOMMENTS_TABLE, array(
