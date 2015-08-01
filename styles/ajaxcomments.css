@@ -1,3 +1,6 @@
+#pt-mytalk {
+	display: none;
+}
 #ajaxcomments textarea {
 	height: 100px;
 }
