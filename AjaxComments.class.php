@@ -38,6 +38,9 @@ class AjaxComments {
 		global $wgOut, $wgResourceModules, $wgAutoloadClasses, $wgExtensionAssetsPath, $IP, $wgUser,
 			$wgAjaxCommentsPollServer, $wgAjaxCommentsLikeDislike, $wgAjaxCommentsCopyTalkpages;
 
+		// If options set, hook into the new revisions to change talk page additions to ajaxcomments
+		if( $wgAjaxCommentsCopyTalkpages ) Hooks::register( 'PageContentSave', $this );
+
 		// Create a hook to allow external condition for whether there should be comments shown
 		$title = array_key_exists( 'title', $_GET ) ? Title::newFromText( $_GET['title'] ) : false;
 		if( !array_key_exists( 'action', $_REQUEST ) && self::checkTitle( $title ) ) Hooks::register( 'BeforePageDisplay', $this );
@@ -49,28 +52,10 @@ class AjaxComments {
 
 		// Redirect talk pages with AjaxComments to the comments
 		if( is_object( $title ) && $title->getNamespace() > 0 && ( $title->getNamespace()&1 ) ) {
-
-			// Get the associated user page
-			$userpage = Title::newFromText( $title->getText(), $title->getNamespace() - 1 );
-
-			// Before redirecting check if the talk page exists and make into an Ajax comment (if config option set)
-			if( $wgAjaxCommentsCopyTalkpages ) {
-				$userpageid = $userpage->getArticleID();
-				if( $title->exists() && $userpageid ) {
-					$article = new Article( $title );
-					$content = $article->getPage()->getContent();
-					if( is_object( $content ) ) $content = $content->getNativeData();
-					if( $content ) {
-						self::add( $content, $userpageid, 1 );
-						$article->doDelete( wfMessage( 'ajaxcomments-movetalkpagecontent' )->text() );
-					}
-				}
-			}
-
-			// Do the redirect
 			$ret = true;
 			Hooks::run( 'AjaxCommentsCheckTitle', array( $userpage, &$ret ) );
 			if( $ret ) {
+				$userpage = Title::newFromText( $title->getText(), $title->getNamespace() - 1 );
 				global $mediaWiki;
 				if( is_object( $mediaWiki ) ) $mediaWiki->restInPeace();
 				$wgOut->disable();
@@ -106,6 +91,43 @@ class AjaxComments {
 	}
 
 	/**
+	 * Check if content about to be saved is into a talk page, and if so, make it into an comment
+	 */
+	public function onPageContentSave( $page, $user, $content, $summary, $isMinor, $isWatch, $section, $flags, $status ) {
+
+		// First check if it's a talk page
+		$title = $page->getTitle();
+		if( $title->getNamespace() > 0 && ( $title->getNamespace()&1 ) ) {
+
+			// Get the associated content page
+			$userpage = Title::newFromText( $title->getText(), $title->getNamespace() - 1 );
+
+			// If so, check that it's a title that comments are enabled for
+			$ret = true;
+			Hooks::run( 'AjaxCommentsCheckTitle', array( $userpage, &$ret ) );
+			if( $ret ) {
+
+				// Use the first user account if no valid user doing the edit
+				$uid = $user->getId();
+				if( $uid < 1 ) $uid = 1;
+
+				// Check that the article being commented on exists
+				$userpageid = $userpage->getArticleID();
+				if( $userpageid ) {
+
+					// Create the comment and abort the save
+					if( is_object( $content ) ) $content = $content->getNativeData();
+					if( $content ) {
+						self::add( $content, $userpageid, $uid );
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
+
+	/**
 	 * Render a name at the end of the page so redirected talk pages can go there before ajax loads the content
 	 */
 	public function onBeforePageDisplay( $out, $skin ) {
@@ -127,7 +149,6 @@ class AjaxComments {
 			'ac_data' => $text,
 		) );
 		$id = $dbw->insertId();
-		wfDebugLog( __CLASS__, AJAXCOMMENTS_TABLE );
 		self::comment( 'add', $page, $id );
 		return self::getComment( $id );
 	}
