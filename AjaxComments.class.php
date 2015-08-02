@@ -275,7 +275,9 @@ class AjaxComments {
 			if( $parent && ( $type == 'reply' || $type == 'edit' ) ) {
 				$body = wfMessage( "ajaxcomments-email-reply-$type", $pagename, $comment['name'] )->text();
 				$user = User::newFromId( $parent['user'] );
-				self::emailUser( $user, $body );
+				$lang = $user->getOption( 'language' );
+				$subject = wfMessage( 'ajaxcomments-email-subject', $pagename )->inLanguage( $lang )->text();
+				self::emailUser( $user, $subject, $body );
 			}
 
 			// Get list of users watching this page (excluding the user who made the comment and user notified about reply if any)
@@ -309,7 +311,7 @@ class AjaxComments {
 					$body = wfMessage( "ajaxcomments-email-watch-$type", $pagename, $comment['name'], $parent ? $parent['name'] : null );
 					$body = $body->inLanguage( $lang )->text();
 					$body .= "\n\n" . wfMessage( 'ajaxcomments-email-link', $comment['name'], $title->getFullUrl(), $id )->inLanguage( $lang )->text();
-					self::emailUser( $watcher, $body );
+					self::emailUser( $watcher, $subject, $body );
 				}
 			}
 		}
