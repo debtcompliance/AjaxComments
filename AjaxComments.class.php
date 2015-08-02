@@ -80,12 +80,13 @@ class AjaxComments {
 	}
 
 	/**
-	 * Allow other extensions to check if a title has comments
+	 * Allow other extensions to check or set if a title has comments
 	 */
 	public static function checkTitle( $title ) {
 		$ret = true;
 		if( $title && !is_object( $title ) ) $title = Title::newFromText( $title );
-		if( !is_object( $title ) || $title->getArticleID() == 0 || $title->isRedirect() || ($title->getNamespace()&1) ) $ret = false;
+		if( !is_object( $title ) || $title->getArticleID() == 0 || $title->isRedirect() || $title->getNamespace() == 8 || ($title->getNamespace()&1) )
+			$ret = false;
 		else Hooks::run( 'AjaxCommentsCheckTitle', array( $title, &$ret ) );
 		return $ret;
 	}
@@ -252,7 +253,9 @@ class AjaxComments {
 		}
 	}
 
-	// Do notifications about comment activity and return the comment
+	/**
+	 * Do notifications about comment activity and return the comment
+	 */
 	private static function comment( $type, $page, $id ) {
 		global $wgAjaxCommentsEmailNotify;
 		$comment = self::getComment( $id );
@@ -264,7 +267,6 @@ class AjaxComments {
 
 		// Notify by email if config enabled
 		if( $wgAjaxCommentsEmailNotify ) {
-			$subject = wfMessage( 'ajaxcomments-email-subject', $pagename )->text();
 
 			// Get the parent comment if any
 			$parent = $comment['parent'] ? self::getComment( $comment['parent'] ) : false;
@@ -272,18 +274,50 @@ class AjaxComments {
 			// Send to the reply-parent item's author (maybe send to the whole chain later)
 			if( $parent && ( $type == 'reply' || $type == 'edit' ) ) {
 				$body = wfMessage( "ajaxcomments-email-reply-$type", $pagename, $comment['name'] )->text();
-				// TODO send to $parent[user]
+				$user = User::newFromId( $parent['user'] );
+				self::emailUser( $user, $body );
 			}
 
-			// Send notification of changed comments to page watchers
-			if( $type == 'add' || $type == 'reply' || $type == 'edit' ) {
-				$body = wfMessage( "ajaxcomments-email-watch-$type", $pagename, $comment['name'], $parent ? $parent['name'] : null )->text();
-				$body .= "\n\n" . wfMessage( 'ajaxcomments-email-link', $comment['name'], $title->getFullUrl(), $id )->text();
-				// TODO: send to $title watchers
-			}
+			// Get list of users watching this page (excluding the user who made the comment and user notified about reply if any)
+			$dbr = wfGetDB( DB_SLAVE );
+			$cond = array( 'wl_title' => $title->getDBkey(), 'wl_namespace' => $title->getNamespace(), 'wl_user <> ' . $comment['user'] );
+			if( $parent ) $cond[] = 'wl_user <> ' . $parent['user'];
+			$res = $dbr->select( 'watchlist', array( 'wl_user' ), $conds, __METHOD__ );
 
+			// Loop through all watchers
+			foreach( $res as $row ) {
+
+				// If this watcher wants to be notified by email of watchlist changes, and the comment is something to notify about,
+				$watcher = User::newFromId( $row->wl_user );
+				if( $watcher->getOption( 'enotifwatchlistpages' ) && $watcher->isEmailConfirmed()
+					&& ( $type == 'add' || $type == 'reply' || $type == 'edit' )
+				) {
+					// Compose the email and send
+					$user = new MailAddress( $watcher );
+					$lang = $user->getOption( 'language' );
+					$body = wfMessage( "ajaxcomments-email-watch-$type", $pagename, $comment['name'], $parent ? $parent['name'] : null );
+					$body = $body->inLanguage( $lang )->text();
+					$body .= "\n\n" . wfMessage( 'ajaxcomments-email-link', $comment['name'], $title->getFullUrl(), $id )->inLanguage( $lang )->text();
+					self::emailUser( $user, $body );
+				}
+			}
 		}
 		return $comment;
+	}
+
+	/**
+	 * Send an email to a user
+	 */
+	private static function emailUser( $user, $body ) {
+		global $wgPasswordSender, $wgPasswordSenderName, $wgSitename;
+		$lang = $user->getOption( 'language' );
+		$subject = wfMessage( 'ajaxcomments-email-subject', $pagename )->inLanguage( $lang )->text();
+		$name = $user->getRealName() ?: $user->getName();
+		$body = wfMessage( 'ajaxcomments-email-hello', $name )->inLanguage( $lang )->text() . "\n\n$body";
+		$from = new MailAddress( $wgPasswordSender, $wgPasswordSenderName ?: $wgSitename );
+		$to = new MailAddress( $user );
+		$body = wordwrap( $body, 72 );
+		UserMailer::send( $to, $from, $subject, $body );
 	}
 
 	/**
