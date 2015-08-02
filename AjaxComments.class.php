@@ -283,7 +283,6 @@ class AjaxComments {
 			$cond = array( 'wl_title' => $title->getDBkey(), 'wl_namespace' => $title->getNamespace(), 'wl_user <> ' . $comment['user'] );
 			if( $parent ) $cond[] = 'wl_user <> ' . $parent['user'];
 			$res = $dbr->select( 'watchlist', array( 'wl_user' ), $cond, __METHOD__ );
-			wfDebugLog( __CLASS__, 'Watchers query: ' . $dbr->lastQuery() );
 			$watchers = array();
 			foreach( $res as $row ) $watchers[$row->wl_user] = true;
 
@@ -306,6 +305,7 @@ class AjaxComments {
 				) {
 					// Compose the email and send
 					$lang = $watcher->getOption( 'language' );
+					$subject = wfMessage( 'ajaxcomments-email-subject', $pagename )->inLanguage( $lang )->text();
 					$body = wfMessage( "ajaxcomments-email-watch-$type", $pagename, $comment['name'], $parent ? $parent['name'] : null );
 					$body = $body->inLanguage( $lang )->text();
 					$body .= "\n\n" . wfMessage( 'ajaxcomments-email-link', $comment['name'], $title->getFullUrl(), $id )->inLanguage( $lang )->text();
@@ -319,10 +319,9 @@ class AjaxComments {
 	/**
 	 * Send an email to a user
 	 */
-	private static function emailUser( $user, $body ) {
+	private static function emailUser( $user, $subject, $body ) {
 		global $wgPasswordSender, $wgPasswordSenderName, $wgSitename;
 		$lang = $user->getOption( 'language' );
-		$subject = wfMessage( 'ajaxcomments-email-subject', $pagename )->inLanguage( $lang )->text();
 		$name = $user->getRealName() ?: $user->getName();
 		$body = wfMessage( 'ajaxcomments-email-hello', $name )->inLanguage( $lang )->text() . "\n\n$body";
 		$from = new MailAddress( $wgPasswordSender, $wgPasswordSenderName ?: $wgSitename );
