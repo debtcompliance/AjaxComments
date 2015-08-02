@@ -302,12 +302,11 @@ class AjaxComments {
 					&& ( $type == 'add' || $type == 'reply' || $type == 'edit' )
 				) {
 					// Compose the email and send
-					$user = new MailAddress( $watcher );
-					$lang = $user->getOption( 'language' );
+					$lang = $watcher->getOption( 'language' );
 					$body = wfMessage( "ajaxcomments-email-watch-$type", $pagename, $comment['name'], $parent ? $parent['name'] : null );
 					$body = $body->inLanguage( $lang )->text();
 					$body .= "\n\n" . wfMessage( 'ajaxcomments-email-link', $comment['name'], $title->getFullUrl(), $id )->inLanguage( $lang )->text();
-					self::emailUser( $user, $body );
+					self::emailUser( $watcher, $body );
 				}
 			}
 		}
