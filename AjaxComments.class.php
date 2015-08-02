@@ -258,7 +258,6 @@ class AjaxComments {
 	 */
 	private static function comment( $type, $page, $id ) {
 		global $wgAjaxCommentsEmailNotify;
-		$comment = self::getComment( $id );
 		$title = Title::newFromId( $page );
 		$pagename =  $title->getPrefixedText();
 		$summary = wfMessage( "ajaxcomments-$type-summary", $pagename, $id )->text();
@@ -266,7 +265,8 @@ class AjaxComments {
 		$log->addEntry( $type, $title, $summary, array( $pagename ) );
 
 		// Notify by email if config enabled
-		if( $wgAjaxCommentsEmailNotify ) {
+		if( $wgAjaxCommentsEmailNotify && $type != 'del' ) {
+			$comment = self::getComment( $id );
 
 			// Get the parent comment if any
 			$parent = $comment['parent'] ? self::getComment( $comment['parent'] ) : false;
