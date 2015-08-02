@@ -119,6 +119,7 @@ class AjaxComments {
 					// Create the comment and abort the save
 					if( is_object( $content ) ) $content = $content->getNativeData();
 					if( $content ) {
+						$content = preg_replace( '/\s*~~~~/', '', $content ); // remove sig markup
 						self::add( $content, $userpageid, $uid );
 						return false;
 					}
