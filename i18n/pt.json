@@ -35,4 +35,12 @@
 	"ajaxcomments-onedislike": "$1 não gosta este comentário",
 	"ajaxcomments-manydislike": "$1 e $2 não gosta este comentário",
 	"ajaxcomments-movetalkpagecontent": "Novo página discussão trocando para um a comentário de AjaxComments"
+	"ajaxcomments-email-subject": "Mudanças nos comentários na página \"$1\"",
+	"ajaxcomments-email-hello": "Olá $1,",
+	"ajaxcomments-email-link": "Clique no seguinte link para ver o comentário de $1.\n$2#comment$3",
+	"ajaxcomments-email-reply-reply": "$2 respondeu ao seu comentário na página \"$1\".",
+	"ajaxcomments-email-reply-edit": "$2 editou a resposta ao seu comentário na página \"$1\".",
+	"ajaxcomments-email-watch-add": "$2 adcionou um novo comentário à página \"$1\" que está na sua lista de páginas vigiadas.",
+	"ajaxcomments-email-watch-edit": "$2 editou um comentário na página \"$1\" que está na sua lista de páginas vigiadas.",
+	"ajaxcomments-email-watch-reply": "$2 respondeu ao comentário de $3 na página \"$1\" que está na sua lista de páginas vigiadas."
 }
