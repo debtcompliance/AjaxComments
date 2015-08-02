@@ -283,9 +283,18 @@ class AjaxComments {
 			$cond = array( 'wl_title' => $title->getDBkey(), 'wl_namespace' => $title->getNamespace(), 'wl_user <> ' . $comment['user'] );
 			if( $parent ) $cond[] = 'wl_user <> ' . $parent['user'];
 			$res = $dbr->select( 'watchlist', array( 'wl_user' ), $conds, __METHOD__ );
+			$watchers = array();
+			foreach( $res as $row ) $watchers[] = $row->wl_user;
 
-			// Loop through all watchers
-			foreach( $res as $row ) {
+			// If this is a user page, ensure the user is listed as a watcher
+			if( $title->getNamespace() == NS_USER ) {
+				$uid = User::newFromName( $title->getText() )->getId();
+				if( $uid > 0 && !in_array( $uid, $watchers ) ) $watchers[] = $uid;
+			}
+
+			// Loop through all watchers in the list
+			foreach( $watchers as $uid ) {
+				$watcher = User::newFromId( $uid );
 
 				// If this watcher wants to be notified by email of watchlist changes, and the comment is something to notify about,
 				$watcher = User::newFromId( $row->wl_user );
