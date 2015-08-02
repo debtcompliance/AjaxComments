@@ -278,6 +278,7 @@ class AjaxComments {
 			// Send notification of changed comments to page watchers
 			if( $type == 'add' || $type == 'reply' || $type == 'edit' ) {
 				$body = wfMessage( "ajaxcomments-email-watch-$type", $pagename, $comment['name'], $parent ? $parent['name'] : null )->text();
+				$body .= "\n\n" . wfMessage( 'ajaxcomments-email-link', $comment['name'], $title->getFullUrl(), $id )->text();
 				// TODO: send to $title watchers
 			}
 
