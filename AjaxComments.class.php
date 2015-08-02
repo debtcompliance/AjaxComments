@@ -291,11 +291,13 @@ class AjaxComments {
 			$watchers = array();
 			foreach( $res as $row ) $watchers[$row->wl_user] = true;
 
-			// If this is a user page, ensure the user is listed as a watcher
+			// If this is a user page, ensure the user is listed as a watcher (unless it's the same user that created the comment)
 			if( $title->getNamespace() == NS_USER ) {
 				$uid = User::newFromName( $title->getText() )->getId();
-				$watchers[$uid] = true;
-				wfDebugLog( __CLASS__, "Comment is on a user page, adding user id $uid to the watchers email list" );
+				if( $uid != $comment['user'] ) {
+					$watchers[$uid] = true;
+					wfDebugLog( __CLASS__, "Comment is on a user page, adding user id $uid to the watchers email list" );
+				}
 			}
 
 			// Loop through all watchers in the list
