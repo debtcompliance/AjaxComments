@@ -329,6 +329,7 @@ class AjaxComments {
 		$to = new MailAddress( $user );
 		$body = wordwrap( $body, 72 );
 		UserMailer::send( $to, $from, $subject, $body );
+		wfDebugLog( __CLASS__, "Send notification to " . $user->getEmail() );
 	}
 
 	/**
