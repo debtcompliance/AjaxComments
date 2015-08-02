@@ -296,6 +296,7 @@ class AjaxComments {
 			}
 
 			// Loop through all watchers in the list
+			wfDebugLog( __CLASS__, "Sending to watchers: " . implode( ',', $watchers ) );
 			foreach( $watchers as $uid ) {
 				$watcher = User::newFromId( $uid );
 
