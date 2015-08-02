@@ -284,20 +284,18 @@ class AjaxComments {
 			if( $parent ) $cond[] = 'wl_user <> ' . $parent['user'];
 			$res = $dbr->select( 'watchlist', array( 'wl_user' ), $conds, __METHOD__ );
 			$watchers = array();
-			foreach( $res as $row ) $watchers[] = $row->wl_user;
+			foreach( $res as $row ) $watchers[$row->wl_user] = true;
 
 			// If this is a user page, ensure the user is listed as a watcher
 			if( $title->getNamespace() == NS_USER ) {
 				$uid = User::newFromName( $title->getText() )->getId();
-				if( $uid > 0 && !in_array( $uid, $watchers ) ) {
-					$watchers[] = $uid;
-					wfDebugLog( __CLASS__, "Comment is on a user page, adding $uid to the watchers email list" );
-				}
+				$watchers[$uid] = true;
+				wfDebugLog( __CLASS__, "Comment is on a user page, adding $uid to the watchers email list" );
 			}
 
 			// Loop through all watchers in the list
 			wfDebugLog( __CLASS__, "Sending to watchers: " . implode( ',', $watchers ) );
-			foreach( $watchers as $uid ) {
+			foreach( array_keys( $watchers ) as $uid ) {
 				$watcher = User::newFromId( $uid );
 
 				// If this watcher wants to be notified by email of watchlist changes, and the comment is something to notify about,
