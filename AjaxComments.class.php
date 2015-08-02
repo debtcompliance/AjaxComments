@@ -192,7 +192,7 @@ class AjaxComments {
 		// Die if the comment is not owned by this user unless sysop
 		if( !in_array( 'sysop', $wgUser->getEffectiveGroups() ) ) {
 			$row = $dbw->selectRow( AJAXCOMMENTS_TABLE, 'ac_user', array( 'ac_id' => $id ) );
-			if( $uid->ac_user != $wgUser->getId() ) return "Only sysops can delete someone else's comment";
+			if( $row->ac_user != $wgUser->getId() ) return "Only sysops can delete someone else's comment";
 		}
 
 		// Delete this comment and all child comments and likes
