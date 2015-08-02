@@ -274,9 +274,10 @@ class AjaxComments {
 
 			// Send to the reply-parent item's author (maybe send to the whole chain later)
 			if( $parent && ( $type == 'reply' || $type == 'edit' ) ) {
-				$body = wfMessage( "ajaxcomments-email-reply-$type", $pagename, $comment['name'] )->text();
 				$user = User::newFromId( $parent['user'] );
 				$lang = $user->getOption( 'language' );
+				$body = wfMessage( "ajaxcomments-email-reply-$type", $pagename, $comment['name'] )->text();
+				$body .= "\n\n" . wfMessage( 'ajaxcomments-email-link', $comment['name'], $title->getFullUrl(), $id )->inLanguage( $lang )->text();
 				$subject = wfMessage( 'ajaxcomments-email-subject', $pagename )->inLanguage( $lang )->text();
 				self::emailUser( $user, $subject, $body );
 			}
