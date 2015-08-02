@@ -294,8 +294,9 @@ class AjaxComments {
 			}
 
 			// Loop through all watchers in the list
+			$watchers = array_keys( $watchers );
 			wfDebugLog( __CLASS__, "Sending to watchers: " . implode( ',', $watchers ) );
-			foreach( array_keys( $watchers ) as $uid ) {
+			foreach( $watchers as $uid ) {
 				$watcher = User::newFromId( $uid );
 
 				// If this watcher wants to be notified by email of watchlist changes, and the comment is something to notify about,
