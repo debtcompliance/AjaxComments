@@ -45,8 +45,8 @@
 	"ajaxcomments-email-subject": "Changes to comments on page \"$1\"",
 	"ajaxcomments-email-hello": "Hello $1,",
 	"ajaxcomments-email-link": "Click the following link to see $1's comment.\n$2#comment$3",
-	"ajaxcomments-email-reply-reply": "$2 replied to your comment on page \"$1\"."
-	"ajaxcomments-email-reply-edit": "$2 edited their reply to your comment on page \"$1\"."
+	"ajaxcomments-email-reply-reply": "$2 replied to your comment on page \"$1\".",
+	"ajaxcomments-email-reply-edit": "$2 edited their reply to your comment on page \"$1\".",
 	"ajaxcomments-email-watch-add": "$2 added a new comment to page \"$1\" which is on your watchlist.",
 	"ajaxcomments-email-watch-edit": "$2 edited a comment on page \"$1\" which is on your watchlist.",
 	"ajaxcomments-email-watch-reply": "$2 replied to $3's comment on page \"$1\" which is on your watchlist."
