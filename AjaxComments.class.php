@@ -287,6 +287,7 @@ class AjaxComments {
 			$cond = array( 'wl_title' => $title->getDBkey(), 'wl_namespace' => $title->getNamespace(), 'wl_user <> ' . $comment['user'] );
 			if( $parent ) $cond[] = 'wl_user <> ' . $parent['user'];
 			$res = $dbr->select( 'watchlist', array( 'wl_user' ), $cond, __METHOD__ );
+			wfDebugLog( __CLASS__, "Watcher query: " . $dbr->lastQuery() );
 			$watchers = array();
 			foreach( $res as $row ) $watchers[$row->wl_user] = true;
 
