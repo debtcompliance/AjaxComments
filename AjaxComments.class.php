@@ -332,7 +332,7 @@ class AjaxComments {
 		$name = $user->getRealName() ?: $user->getName();
 		$body = wfMessage( 'ajaxcomments-email-hello', $name )->inLanguage( $lang )->text() . "\n\n$body";
 		$from = new MailAddress( $wgPasswordSender, $wgPasswordSenderName ?: $wgSitename );
-		$to = new MailAddress( $user );
+		$to = new MailAddress( $user->getEmail(), $user->getName(), $user->getRealName() );
 		$body = wordwrap( $body, 72 );
 		UserMailer::send( $to, $from, $subject, $body );
 		wfDebugLog( __CLASS__, "Send notification to " . $user->getEmail() );
