@@ -148,9 +148,7 @@ class AjaxComments {
 			'ac_time' => time(),
 			'ac_data' => $text,
 		) );
-		$id = $dbw->insertId();
-		self::comment( 'add', $page, $id );
-		return self::getComment( $id );
+		return self::comment( 'add', $page, $dbw->insertId() );
 	}
 
 	/**
@@ -159,8 +157,7 @@ class AjaxComments {
 	public static function edit( $text, $page, $id ) {
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->update( AJAXCOMMENTS_TABLE, array( 'ac_data' => $text ), array( 'ac_id' => $id ) );
-		self::comment( 'edit', $page, $id );
-		return self::getComment( $id );
+		return self::comment( 'edit', $page, $id );
 	}
 
 	/**
@@ -180,9 +177,7 @@ class AjaxComments {
 			'ac_time'   => $ts,
 			'ac_data'   => $text,
 		) );
-		$id = $dbw->insertId();
-		self::comment( 'reply', $page, $id );
-		return self::getComment( $id );
+		return self::comment( 'reply', $page, $dbw->insertId() );
 	}
 
 	/**
@@ -257,12 +252,37 @@ class AjaxComments {
 		}
 	}
 
-	// Add a log entry about this activity
+	// Do notifications about comment activity and return the comment
 	private static function comment( $type, $page, $id ) {
+		global $wgAjaxCommentsEmailNotify;
+		$comment = self::getComment( $id );
 		$title = Title::newFromId( $page );
-		$summary = wfMessage( "ajaxcomments-$type-summary", $title->getPrefixedText(), $id )->text();
+		$pagename =  $title->getPrefixedText();
+		$summary = wfMessage( "ajaxcomments-$type-summary", $pagename, $id )->text();
 		$log = new LogPage( 'ajaxcomments', true );
-		$log->addEntry( $type, $title, $summary, array( $title->getPrefixedText() ) );
+		$log->addEntry( $type, $title, $summary, array( $pagename ) );
+
+		// Notify by email if config enabled
+		if( $wgAjaxCommentsEmailNotify ) {
+			$subject = wfMessage( 'ajaxcomments-email-subject', $pagename )->text();
+
+			// Get the parent comment if any
+			$parent = $comment['parent'] ? self::getComment( $comment['parent'] ) : false;
+
+			// Send to the reply-parent item's author (maybe send to the whole chain later)
+			if( $parent && ( $type == 'reply' || $type == 'edit' ) ) {
+				$body = wfMessage( "ajaxcomments-email-reply-$type", $pagename, $comment['name'] )->text();
+				// TODO send to $parent[user]
+			}
+
+			// Send notification of changed comments to page watchers
+			if( $type == 'add' || $type == 'reply' || $type == 'edit' ) {
+				$body = wfMessage( "ajaxcomments-email-watch-$type", $pagename, $comment['name'], $parent ? $parent['name'] : null )->text();
+				// TODO: send to $title watchers
+			}
+
+		}
+		return $comment;
 	}
 
 	/**
