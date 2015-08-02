@@ -290,7 +290,7 @@ class AjaxComments {
 			if( $title->getNamespace() == NS_USER ) {
 				$uid = User::newFromName( $title->getText() )->getId();
 				$watchers[$uid] = true;
-				wfDebugLog( __CLASS__, "Comment is on a user page, adding $uid to the watchers email list" );
+				wfDebugLog( __CLASS__, "Comment is on a user page, adding user id $uid to the watchers email list" );
 			}
 
 			// Loop through all watchers in the list
@@ -300,7 +300,6 @@ class AjaxComments {
 				$watcher = User::newFromId( $uid );
 
 				// If this watcher wants to be notified by email of watchlist changes, and the comment is something to notify about,
-				$watcher = User::newFromId( $row->wl_user );
 				if( $watcher->getOption( 'enotifwatchlistpages' ) && $watcher->isEmailConfirmed()
 					&& ( $type == 'add' || $type == 'reply' || $type == 'edit' )
 				) {
