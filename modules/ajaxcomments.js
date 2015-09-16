@@ -85,48 +85,58 @@ $(document).ready( function() {
 	 * An delete link has been clicked
 	 */
 	function del(idlist, notify) {
-		var i, e, id, buttons;
+		var i, id, buttons;
 		for( i = 0; i < idlist.length; i++ ) {
 			id = idlist[i];
-			e = $('#ajaxcomment-' + id);
-			buttons = {}
-			buttons[mw.message( 'ajaxcomments-yes' ).escaped()] = function() {
-				console.log('AjaxComments: del(' + id + ')');
-
-				// Replace the comment content with a loader
-				e.addClass('loading');
-
-				// Submit the delete request
-				request.data.type = 'del';
-				request.data.page = page;
-				request.data.id = id;
-				request.success = function(json) {
-					var data = json.ajaxcomments;
-
-					// Delete the this comment's visual element (which contains all replies)
-					e.fadeOut(500);
-
-					// Delete the returned ID's from the local comments data store
-					for( i = 0; i < data.length; i++ ) delete(comments[data[i]]);
-
-					// If no comments, add message
-					noComments();
-
-					// If notify set, send this id list via WebSocket
-					if(ws && notify) webSocket.send(wsDelete, data);
-				};
-				$.ajax(request);
-				$(this).dialog('close');
-			 };
-			buttons[mw.message( 'ajaxcomments-cancel' ).escaped()] = function() { $(this).dialog('close'); };
-			$('<div>' + mw.message( 'ajaxcomments-confirmdel' ).escaped() + '</div>').dialog({
-				modal: true,
-				resizable: false,
-				width: 400,
-				title: mw.message( 'ajaxcomments-confirm' ).escaped(),
-				buttons: buttons
-			});
+			if(notify) {
+				buttons = {}
+				buttons[mw.message( 'ajaxcomments-yes' ).escaped()] = function() {
+					delReal(id, page, notify);
+					$(this).dialog('close');
+				 };
+				buttons[mw.message( 'ajaxcomments-cancel' ).escaped()] = function() { $(this).dialog('close'); };
+				$('<div>' + mw.message( 'ajaxcomments-confirmdel' ).escaped() + '</div>').dialog({
+					modal: true,
+					resizable: false,
+					width: 400,
+					title: mw.message( 'ajaxcomments-confirm' ).escaped(),
+					buttons: buttons
+				});
+			} else delReal(id, page, notify);
 		}
+	}
+
+	/**
+	 * Do the actual delete
+	 */
+	function delReal(id, page, notify) {
+		var i, e;
+		console.log('AjaxComments: del(' + id + ')');
+
+		// Replace the comment content with a loader
+		e = $('#ajaxcomment-' + id);
+		e.addClass('loading');
+
+		// Submit the delete request
+		request.data.type = 'del';
+		request.data.page = page;
+		request.data.id = id;
+		request.success = function(json) {
+			var data = json.ajaxcomments;
+
+			// Delete the this comment's visual element (which contains all replies)
+			e.fadeOut(500);
+
+			// Delete the returned ID's from the local comments data store
+			for( i = 0; i < data.length; i++ ) delete(comments[data[i]]);
+
+			// If no comments, add message
+			noComments();
+
+			// If notify set, send this id list via WebSocket
+			if(ws && notify) webSocket.send(wsDelete, data);
+		};
+		$.ajax(request);
 	}
 
 	/**
