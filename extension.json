@@ -1,6 +1,6 @@
 {
 	"name": "AjaxComments",
-	"version": "2.6.1, 2015-08-02",
+	"version": "2.6.2, 2015-09-21",
 	"author": ["[http://www.organicdesign.co.nz/aran Aran Dunkley]"],
 	"url": "http://www.mediawiki.org/wiki/Extension:AjaxComments",
 	"descriptionmsg": "ajaxcomments-desc",
@@ -12,7 +12,8 @@
 		"AjaxCommentsAvatars": true,            "@": "use the gravatar service for users icons",
 		"AjaxCommentsPollServer": 0,            "@": "poll the server to see if any changes to comments have been made and update if so",
 		"AjaxCommentsCopyTalkpages": true,      "@": "if set then content in talkpages will become a comment and talk page deleted",
-		"AjaxCommentsEmailNotify": true,        "@": "is set, sends notification of replies and activity on watched pages to users by email"
+		"AjaxCommentsEmailNotify": true,        "@": "is set, sends notification of replies and activity on watched pages to users by email",
+		"AjaxCommentsAdmins": ["sysop"],        "@": "list of groups that have admin priviliges for comments"
 	},
 	"AutoloadClasses": {
 		"AjaxComments": "AjaxComments.class.php",

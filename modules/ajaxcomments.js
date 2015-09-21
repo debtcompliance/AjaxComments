@@ -13,7 +13,7 @@ $(document).ready( function() {
 	var user = mw.config.get('wgUserId');
 	var username = mw.config.get('wgUserName');
 	var groups = mw.config.get('wgUserGroups');
-	var sysop = $.inArray( 'sysop', groups ) >= 0;
+	var sysop = mw.config.get('ajaxCommentsAdmin');
 
 	// Is the user allowed to add comments/edit etc?
 	var canComment = mw.config.get('ajaxCommentsCanComment');

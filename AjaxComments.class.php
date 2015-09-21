@@ -2,6 +2,7 @@
 class AjaxComments {
 
 	public static $instance = null;
+	private static $admin = false;
 
 	private $comments = array();
 	private $talk = false;
@@ -36,7 +37,10 @@ class AjaxComments {
 
 	public function setup() {
 		global $wgOut, $wgResourceModules, $wgAutoloadClasses, $wgExtensionAssetsPath, $IP, $wgUser,
-			$wgAjaxCommentsPollServer, $wgAjaxCommentsLikeDislike, $wgAjaxCommentsCopyTalkpages;
+			$wgAjaxCommentsPollServer, $wgAjaxCommentsLikeDislike, $wgAjaxCommentsCopyTalkpages,  $wgAjaxCommentsAdmins;
+
+		// Determine if the current user is an admin for comments
+		self::$admin = count( array_intersect( $wgAjaxCommentsAdmins, $wgUser->getEffectiveGroups() ) ) > 0;
 
 		// If options set, hook into the new revisions to change talk page additions to ajaxcomments
 		if( $wgAjaxCommentsCopyTalkpages ) Hooks::register( 'PageContentSave', $this );
@@ -77,6 +81,7 @@ class AjaxComments {
 		$wgOut->addJsConfigVars( 'ajaxCommentsPollServer', $wgAjaxCommentsPollServer );
 		$wgOut->addJsConfigVars( 'ajaxCommentsCanComment', $this->canComment );
 		$wgOut->addJsConfigVars( 'ajaxCommentsLikeDislike', $wgAjaxCommentsLikeDislike );
+		$wgOut->addJsConfigVars( 'ajaxCommentsAdmin', self::$admin );
 	}
 
 	/**
@@ -186,13 +191,13 @@ class AjaxComments {
 	 * Delete a comment amd all its replies from the data structure
 	 */
 	public static function delete( $page, $id ) {
-		global $wgUser;
+		global $wgUser, $wgAjaxCommentsAdmins;
 		$dbw = wfGetDB( DB_MASTER );
 
 		// Die if the comment is not owned by this user unless sysop
-		if( !in_array( 'sysop', $wgUser->getEffectiveGroups() ) ) {
+		if( !self::$admin ) {
 			$row = $dbw->selectRow( AJAXCOMMENTS_TABLE, 'ac_user', array( 'ac_id' => $id ) );
-			if( $row->ac_user != $wgUser->getId() ) return "Only sysops can delete someone else's comment";
+			if( $row->ac_user != $wgUser->getId() ) return "Only admins can delete someone else's comment";
 		}
 
 		// Delete this comment and all child comments and likes
