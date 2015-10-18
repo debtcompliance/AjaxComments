@@ -55,15 +55,15 @@ $(document).ready( function() {
 
 		// Create a target for the comments and put a loader in it
 		$('#ajaxcomments-name').after('<div id="ajaxcomments-wrapper"><div id="ajaxcomments" class="ajaxcomments-loader"></div></div>');
-	}
 
-	// If WebSocket is available, connect it and set rendering and deleting of comments to occur when notified
-	updateComments();
-	if(typeof webSocket === 'object') {
-		ws = webSocket.connect();
-		webSocket.disconnected(updateComments);
-		webSocket.subscribe(wsRender, function(data) { renderComments(data.msg) } );
-		webSocket.subscribe(wsDelete, function(data) { del(data.msg, false) } );
+		// If WebSocket is available, connect it and set rendering and deleting of comments to occur when notified
+		updateComments();
+		if(typeof webSocket === 'object') {
+			ws = webSocket.connect();
+			webSocket.disconnected(updateComments);
+			webSocket.subscribe(wsRender, function(data) { renderComments(data.msg) } );
+			webSocket.subscribe(wsDelete, function(data) { del(data.msg, false) } );
+		}
 	}
 
 	/**
