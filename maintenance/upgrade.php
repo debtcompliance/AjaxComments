@@ -28,7 +28,8 @@ class UpgradeAjaxComments extends Maintenance {
 
 		// If the table already exists, bail
 		$tbl = $dbw->tableName( AJAXCOMMENTS_TABLE );
-		if( $dbw->query( "SHOW TABLES LIKE $tbl" )->result->num_rows ) {
+		$tblq = str_replace( '`', "'", $tbl );
+		if( $dbw->query( "SHOW TABLES LIKE $tblq" )->result->num_rows ) {
 			$this->output( 'Already upgraded!' );
 			return;
 		}
