@@ -26,6 +26,13 @@ class UpgradeAjaxComments extends Maintenance {
 	public function execute() {
 		$dbw = wfGetDB( DB_MASTER );
 
+		// If the table already exists, bail
+		$tbl = $dbw->tableName( AJAXCOMMENTS_TABLE );
+		if( $dbw->query( "SHOW TABLES LIKE $tbl" )->result->num_rows ) {
+			$this->output( 'Already upgraded!' );
+			return;
+		}
+
 		// Scan all talk pages for AjaxComments data structures
 		$this->output( "\nScanning talk pages for comments needing migration...\n" );
 		$res = $dbw->select( 'page', array( 'page_id' ), array( 'page_namespace & 1' ) );
@@ -102,10 +109,8 @@ class UpgradeAjaxComments extends Maintenance {
 		$this->output( "   Done\n" );
 
 		// Add the new table
-		$tbl = $dbw->tableName( AJAXCOMMENTS_TABLE );
 		$this->output( "\nAdding table $tbl if it doesn't already exist, clearing data if it does exist...\n" );
-		$dbw->query( "DROP TABLE IF EXISTS $tbl" );
-		$dbw->query( "CREATE TABLE IF NOT EXISTS $tbl (
+		$dbw->query( "CREATE TABLE $tbl (
 			ac_id     INT UNSIGNED NOT NULL AUTO_INCREMENT,
 			ac_type   INT UNSIGNED NOT NULL,
 			ac_parent INT UNSIGNED,
