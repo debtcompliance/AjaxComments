@@ -168,6 +168,9 @@ $(document).ready( function() {
 	function input(type, id) {
 		var c, html, sel = '#ajaxcomment-' + id;
 
+		// Don't add if add already open
+		if(type == 'add' && $('#ajaxcomment-new').length > 0) return;
+
 		// Cancel any existing inputs
 		cancel();
 
