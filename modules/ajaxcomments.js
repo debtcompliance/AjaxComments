@@ -170,7 +170,6 @@ $(document).ready( function() {
 
 		// Cancel any existing inputs
 		cancel();
-		$('#ajaxcomment-new').remove();
 
 		// Hide the no comments message if exists
 		$('#ajaxcomments-none').hide();
@@ -214,7 +213,7 @@ $(document).ready( function() {
 		if(type == 'edit') $(sel + ' textarea:first').text(comments[id].text);
 
 		// Activate the buttons
-		$(sel + ' button.cancel:first').click(function() { cancel(); $('#ajaxcomment-new').fadeOut(300); });
+		$(sel + ' button.cancel:first').click(function() { cancel(); });
 		$(sel + ' button.submit:first').data({'id': id, 'type': type}).click(function() {
 			submit( $(this).data('type'), $(this).data('id') );
 		});
@@ -224,10 +223,9 @@ $(document).ready( function() {
 	 * Remove any current comment input box, or new comment
 	 */
 	function cancel() {
-		if($('#ajaxcomment-new').length > 0) return $('#ajaxcomment-new').fadeOut(300);
+		if($('#ajaxcomment-new').length > 0) return $('#ajaxcomment-new').fadeOut(300, function() { $('#ajaxcomment-new').remove(); });
 		$('#ajaxcomment-input button').hide();
-		$('#ajaxcomment-input').fadeOut(300);
-		$('#ajaxcomment-input:hidden').detach();
+		$('#ajaxcomment-input').fadeOut(300, function() { $(this).remove(); });
 		$('.ajaxcomment-icon').show();
 		$('.ajaxcomment-text').show();
 		$('#ajaxcomments .buttons').show();
