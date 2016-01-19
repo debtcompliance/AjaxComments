@@ -3,6 +3,7 @@
 }
 #ajaxcomments textarea {
 	height: 100px;
+	margin-bottom: 5px;
 }
 #ajaxcomments-none {
 	font-style: italic;
@@ -13,7 +14,7 @@
 }
 .ajaxcomment {
 	margin: 10px 0 0 0;
-	padding: 5px 8px;
+	padding: 5px 15px 5px 8px;
 	border: 1px solid #cce0f2;
 	background: #f0f8fe;
 	border-radius: 8px;
