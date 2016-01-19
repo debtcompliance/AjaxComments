@@ -227,6 +227,7 @@ $(document).ready( function() {
 		if($('#ajaxcomment-new').length > 0) return $('#ajaxcomment-new').fadeOut(300);
 		$('#ajaxcomment-input button').hide();
 		$('#ajaxcomment-input').fadeOut(300);
+		$('#ajaxcomment-input:hidden').detach();
 		$('.ajaxcomment-icon').show();
 		$('.ajaxcomment-text').show();
 		$('#ajaxcomments .buttons').show();
