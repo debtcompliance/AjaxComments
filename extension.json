@@ -1,6 +1,6 @@
 {
 	"name": "AjaxComments",
-	"version": "2.6.5, 2016-01-19",
+	"version": "2.7.0, 2016-07-07",
 	"author": ["[http://www.organicdesign.co.nz/aran Aran Dunkley]"],
 	"url": "http://www.mediawiki.org/wiki/Extension:AjaxComments",
 	"descriptionmsg": "ajaxcomments-desc",
@@ -14,6 +14,9 @@
 		"AjaxCommentsCopyTalkpages": true,      "@": "if set then content in talkpages will become a comment and talk page deleted",
 		"AjaxCommentsEmailNotify": true,        "@": "is set, sends notification of replies and activity on watched pages to users by email",
 		"AjaxCommentsAdmins": ["sysop"],        "@": "list of groups that have admin priviliges for comments"
+	},
+	"Hooks": {
+		"ParserFirstCallInit": ["AjaxComments::onParserFirstCallInit"]
 	},
 	"AutoloadClasses": {
 		"AjaxComments": "AjaxComments.class.php",

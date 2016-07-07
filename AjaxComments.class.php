@@ -2,11 +2,11 @@
 class AjaxComments {
 
 	public static $instance = null;
-	private static $admin = false;
+	private static $admin = null;
 
 	private $comments = array();
 	private $talk = false;
-	private $canComment = false;
+	private static $canComment = false;
 
 	public static function onRegistration() {
 		global $wgLogTypes, $wgLogNames, $wgLogHeaders, $wgLogActions, $wgAPIModules, $wgExtensionFunctions;
@@ -36,11 +36,8 @@ class AjaxComments {
 	}
 
 	public function setup() {
-		global $wgOut, $wgResourceModules, $wgAutoloadClasses, $wgExtensionAssetsPath, $IP, $wgUser,
-			$wgAjaxCommentsPollServer, $wgAjaxCommentsLikeDislike, $wgAjaxCommentsCopyTalkpages,  $wgAjaxCommentsAdmins;
-
-		// Determine if the current user is an admin for comments
-		self::$admin = count( array_intersect( $wgAjaxCommentsAdmins, $wgUser->getEffectiveGroups() ) ) > 0;
+		global $wgOut, $wgResourceModules, $wgAutoloadClasses, $wgExtensionAssetsPath, $IP,
+			$wgAjaxCommentsPollServer, $wgAjaxCommentsCopyTalkpages;
 
 		// If options set, hook into the new revisions to change talk page additions to ajaxcomments
 		if( $wgAjaxCommentsCopyTalkpages ) Hooks::register( 'PageContentSave', $this );
@@ -49,10 +46,6 @@ class AjaxComments {
 		$title = array_key_exists( 'title', $_GET ) ? Title::newFromText( $_GET['title'] ) : false;
 		if( !array_key_exists( 'action', $_REQUEST ) && self::checkTitle( $title ) ) Hooks::register( 'BeforePageDisplay', $this );
 		else $wgAjaxCommentsPollServer = -1;
-
-		// Create a hook to allow external condition for whether comments can be added or replied to (default is just user logged in)
-		$this->canComment = $wgUser->isLoggedIn();
-		Hooks::run( 'AjaxCommentsCheckWritable', array( $title, &$this->canComment ) );
 
 		// Redirect talk pages with AjaxComments to the comments
 		if( is_object( $title ) && $title->getNamespace() > 0 && ( $title->getNamespace()&1 ) ) {
@@ -76,12 +69,15 @@ class AjaxComments {
 		$wgResourceModules['ext.ajaxcomments']['remoteExtPath'] = $path;
 		$wgOut->addModules( 'ext.ajaxcomments' );
 		$wgOut->addStyle( "$path/styles/ajaxcomments.css" );
+	}
 
-		// Add config vars to client side
-		$wgOut->addJsConfigVars( 'ajaxCommentsPollServer', $wgAjaxCommentsPollServer );
-		$wgOut->addJsConfigVars( 'ajaxCommentsCanComment', $this->canComment );
-		$wgOut->addJsConfigVars( 'ajaxCommentsLikeDislike', $wgAjaxCommentsLikeDislike );
-		$wgOut->addJsConfigVars( 'ajaxCommentsAdmin', self::$admin );
+	/**
+	 * Determine if the current user is an admin for comments
+	 */
+	private static function isAdmin() {
+		global $wgAjaxCommentsAdmins, $wgUser;
+		if( !is_null( self::$admin ) ) return self::$admin;
+		return self::$admin = count( array_intersect( $wgAjaxCommentsAdmins, $wgUser->getEffectiveGroups() ) ) > 0;
 	}
 
 	/**
@@ -94,6 +90,24 @@ class AjaxComments {
 			$ret = false;
 		else Hooks::run( 'AjaxCommentsCheckTitle', array( $title, &$ret ) );
 		return $ret;
+	}
+
+	/**
+	 * User is not established at ExtensionFunctions time as of 1.27
+	 */
+	public static function onParserFirstCallInit( $parser ) {
+		global $wgOut, $wgUser, $wgTitle, $wgAjaxCommentsPollServer, $wgAjaxCommentsLikeDislike;
+
+		// Create a hook to allow external condition for whether comments can be added or replied to (default is just user logged in)
+		self::$canComment = $wgUser->isLoggedIn();
+		Hooks::run( 'AjaxCommentsCheckWritable', array( $wgTitle, &self::$canComment ) );
+
+		// Add JS config vars
+		$wgOut->addJsConfigVars( 'ajaxCommentsPollServer', $wgAjaxCommentsPollServer );
+		$wgOut->addJsConfigVars( 'ajaxCommentsCanComment', self::$canComment );
+		$wgOut->addJsConfigVars( 'ajaxCommentsLikeDislike', $wgAjaxCommentsLikeDislike );
+		$wgOut->addJsConfigVars( 'ajaxCommentsAdmin', self::isAdmin() );
+		return true;
 	}
 
 	/**
@@ -135,7 +149,7 @@ class AjaxComments {
 	}
 
 	/**
-	 * Render a name at the end of the page so redirected talk pages can go there before ajax loads the content
+	 * Render a name at the end of the page so redirected talk pages can go there before ajax loads the content,
 	 */
 	public function onBeforePageDisplay( $out, $skin ) {
 		$out->addHtml( '<h2>' . wfMessage( 'ajaxcomments-heading' )->text() . '</h2><a id="ajaxcomments-name" name="ajaxcomments"></a>' );
@@ -195,7 +209,7 @@ class AjaxComments {
 		$dbw = wfGetDB( DB_MASTER );
 
 		// Die if the comment is not owned by this user unless sysop
-		if( !self::$admin ) {
+		if( !self::isAdmin() ) {
 			$row = $dbw->selectRow( AJAXCOMMENTS_TABLE, 'ac_user', array( 'ac_id' => $id ) );
 			if( $row->ac_user != $wgUser->getId() ) return "Only admins can delete someone else's comment";
 		}
