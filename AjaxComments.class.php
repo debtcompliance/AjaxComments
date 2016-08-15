@@ -32,27 +32,27 @@ class AjaxComments {
 		$wgAPIModules['ajaxcomments'] = 'ApiAjaxComments';
 
 		// Call us at extension setup time
-		$wgExtensionFunctions[] = array( self::$instance, 'setup' );
+		Hooks::register( 'UserGetRights', self::$instance );
 	}
 
-	public function setup() {
-		global $wgOut, $wgResourceModules, $wgAutoloadClasses, $wgExtensionAssetsPath, $IP,
+	// Using this hook for setup so that user and title are setup
+	public function onUserGetRights( $user, &$rights ) {
+		global $wgOut, $wgTitle, $wgResourceModules, $wgAutoloadClasses, $wgExtensionAssetsPath, $IP,
 			$wgAjaxCommentsPollServer, $wgAjaxCommentsCopyTalkpages;
 
 		// If options set, hook into the new revisions to change talk page additions to ajaxcomments
 		if( $wgAjaxCommentsCopyTalkpages ) Hooks::register( 'PageContentSave', $this );
 
 		// Create a hook to allow external condition for whether there should be comments shown
-		$title = array_key_exists( 'title', $_GET ) ? Title::newFromText( $_GET['title'] ) : false;
-		if( !array_key_exists( 'action', $_REQUEST ) && self::checkTitle( $title ) ) Hooks::register( 'BeforePageDisplay', $this );
+		if( !array_key_exists( 'action', $_REQUEST ) && self::checkTitle( $wgTitle ) ) Hooks::register( 'BeforePageDisplay', $this );
 		else $wgAjaxCommentsPollServer = -1;
 
 		// Redirect talk pages with AjaxComments to the comments
-		if( is_object( $title ) && $title->getNamespace() > 0 && ( $title->getNamespace()&1 ) ) {
+		if( is_object( $wgTitle ) && $wgTitle->getNamespace() > 0 && ( $wgTitle->getNamespace() & 1 ) ) {
 			$ret = true;
 			Hooks::run( 'AjaxCommentsCheckTitle', array( $userpage, &$ret ) );
 			if( $ret ) {
-				$userpage = Title::newFromText( $title->getText(), $title->getNamespace() - 1 );
+				$userpage = Title::newFromText( $wgTitle->getText(), $wgTitle->getNamespace() - 1 );
 				global $mediaWiki;
 				if( is_object( $mediaWiki ) ) $mediaWiki->restInPeace();
 				$wgOut->disable();
