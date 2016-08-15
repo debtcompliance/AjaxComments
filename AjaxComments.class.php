@@ -31,7 +31,7 @@ class AjaxComments {
 		// Register our ajax handler
 		$wgAPIModules['ajaxcomments'] = 'ApiAjaxComments';
 
-		// Call us at extension setup time
+		// Do the rest of the setup after user and title are ready
 		Hooks::register( 'UserGetRights', self::$instance );
 	}
 
