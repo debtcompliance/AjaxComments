@@ -170,7 +170,7 @@ class AjaxComments {
 			'ac_data' => $text,
 		];
 		$dbw->insert( AJAXCOMMENTS_TABLE, $row );
-		$id = $dbw->insertId()
+		$id = $dbw->insertId();
 		self::comment( 'add', $page, $id );
 		Hooks::run( 'AjaxCommentsChange', 'add', $id );
 	}
@@ -203,7 +203,7 @@ class AjaxComments {
 			'ac_data'   => $text,
 		];
 		if( $dbw->insert( AJAXCOMMENTS_TABLE, $row ) ) Hooks::run( 'AjaxCommentsInsert', $row );
-		$id = $dbw->insertId()
+		$id = $dbw->insertId();
 		Hooks::run( 'AjaxCommentsChange', 'reply', $id );
 		return self::comment( 'reply', $page, $id );
 	}
