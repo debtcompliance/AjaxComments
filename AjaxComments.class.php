@@ -171,7 +171,7 @@ class AjaxComments {
 		];
 		$dbw->insert( AJAXCOMMENTS_TABLE, $row );
 		$id = $dbw->insertId();
-		Hooks::run( 'AjaxCommentsChange', ['add', $id] );
+		Hooks::run( 'AjaxCommentsChange', ['add', $page, $id] );
 		return self::comment( 'add', $page, $id );
 	}
 
@@ -181,7 +181,7 @@ class AjaxComments {
 	public static function edit( $text, $page, $id ) {
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->update( AJAXCOMMENTS_TABLE, ['ac_data' => $text], ['ac_id' => $id] );
-		Hooks::run( 'AjaxCommentsChange', ['edit', $id] );
+		Hooks::run( 'AjaxCommentsChange', ['edit', $page, $id] );
 		return self::comment( 'edit', $page, $id );
 	}
 
@@ -204,7 +204,7 @@ class AjaxComments {
 		];
 		$dbw->insert( AJAXCOMMENTS_TABLE, $row );
 		$id = $dbw->insertId();
-		Hooks::run( 'AjaxCommentsChange', ['reply', $id] );
+		Hooks::run( 'AjaxCommentsChange', ['reply', $page, $id] );
 		return self::comment( 'reply', $page, $id );
 	}
 
@@ -223,7 +223,7 @@ class AjaxComments {
 
 		// Delete this comment and all child comments and likes
 		$children = self::children( $id );
-		Hooks::run( 'AjaxCommentsChange', ['delete', $children] );
+		Hooks::run( 'AjaxCommentsChange', ['delete', $page, $children] );
 		$dbw->delete( AJAXCOMMENTS_TABLE, 'ac_id IN (' . implode( ',', $children ) . ')' );
 		self::comment( 'del', $page, $id );
 		return $children;
