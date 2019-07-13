@@ -35,10 +35,11 @@ class AjaxComments {
 		Hooks::register( 'UserGetRights', self::$instance );
 	}
 
-	// Using this hook for setup so that user and title are setup
+	/**
+	 * Using this hook for setup so that user and title are setup
+	 */
 	public function onUserGetRights( $user, &$rights ) {
-		global $wgOut, $wgTitle, $wgResourceModules, $wgAutoloadClasses, $wgExtensionAssetsPath, $IP,
-			$wgAjaxCommentsPollServer, $wgAjaxCommentsCopyTalkpages;
+		global $wgOut, $wgTitle, $wgAjaxCommentsPollServer, $wgAjaxCommentsCopyTalkpages;
 
 		// If options set, hook into the new revisions to change talk page additions to ajaxcomments
 		if( $wgAjaxCommentsCopyTalkpages ) Hooks::register( 'PageContentSave', $this );
@@ -64,11 +65,9 @@ class AjaxComments {
 			}
 		}
 
-		// This gets the remote path even if it's a symlink (MW1.25+)
-		$path = $wgExtensionAssetsPath . str_replace( "$IP/extensions", '', dirname( $wgAutoloadClasses[__CLASS__] ) );
-		$wgResourceModules['ext.ajaxcomments']['remoteExtPath'] = $path;
+		// Load JS and CSS
 		$wgOut->addModules( 'ext.ajaxcomments' );
-		$wgOut->addStyle( "$path/styles/ajaxcomments.css" );
+		$wgOut->addModuleStyles( 'ext.ajaxcomments' );
 	}
 
 	/**
