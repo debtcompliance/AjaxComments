@@ -139,7 +139,7 @@ class AjaxComments {
 	public static function edit( $text, $page, $id ) {
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->update( AJAXCOMMENTS_TABLE, ['ac_data' => $text], ['ac_id' => $id] );
-		Hooks::run( 'AjaxCommentsChange', ['edit', $page, $id] );
+		//Hooks::run( 'AjaxCommentsChange', ['edit', $page, $id] );
 		return self::comment( 'edit', $page, $id );
 	}
 
@@ -313,7 +313,7 @@ class AjaxComments {
 	}
 
 	/**
-	 * Send an email to a user
+	 * Queue an email to be sent to a user
 	 */
 	private static function emailUser( $user, $subject, $body ) {
 		global $wgPasswordSender, $wgPasswordSenderName, $wgSitename;
@@ -323,8 +323,9 @@ class AjaxComments {
 		$from = new MailAddress( $wgPasswordSender, $wgPasswordSenderName ?: $wgSitename );
 		$to = new MailAddress( $user->getEmail(), $user->getName(), $user->getRealName() );
 		$body = wordwrap( $body, 72 );
-		UserMailer::send( $to, $from, $subject, $body );
-		wfDebugLog( __CLASS__, "Send notification to " . $user->getEmail() );
+		$job = new EmaillingJob( Title::newFromText( $name ), ['to' => $to, 'from' => $from, 'subj' => $subject, 'body' => $body] );
+		JobQueueGroup::singleton()->lazyPush( $job );
+		wfDebugLog( __CLASS__, "Queued email notification to " . $user->getEmail() );
 	}
 
 	/**
