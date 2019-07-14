@@ -39,10 +39,7 @@ class AjaxComments {
 	 * Using this hook for setup so that user and title are setup
 	 */
 	public function onUserGetRights( $user, &$rights ) {
-		global $wgOut, $wgTitle, $wgAjaxCommentsPollServer, $wgAjaxCommentsCopyTalkpages;
-
-		// If options set, hook into the new revisions to change talk page additions to ajaxcomments
-		if( $wgAjaxCommentsCopyTalkpages ) Hooks::register( 'PageContentSave', $this );
+		global $wgOut, $wgTitle, $wgAjaxCommentsPollServer;
 
 		// Create a hook to allow external condition for whether there should be comments shown
 		if( !array_key_exists( 'action', $_REQUEST ) && self::checkTitle( $wgTitle ) ) Hooks::register( 'BeforePageDisplay', $this );
@@ -106,44 +103,6 @@ class AjaxComments {
 		$wgOut->addJsConfigVars( 'ajaxCommentsCanComment', self::$canComment );
 		$wgOut->addJsConfigVars( 'ajaxCommentsLikeDislike', $wgAjaxCommentsLikeDislike );
 		$wgOut->addJsConfigVars( 'ajaxCommentsAdmin', self::isAdmin() );
-		return true;
-	}
-
-	/**
-	 * Check if content about to be saved is into a talk page, and if so, make it into an comment
-	 */
-	public function onPageContentSave( $page, $user, $content, $summary, $isMinor, $isWatch, $section, $flags, $status ) {
-
-		// First check if it's a talk page
-		$title = $page->getTitle();
-		if( $title->getNamespace() > 0 && ( $title->getNamespace()&1 ) ) {
-
-			// Get the associated content page
-			$userpage = Title::newFromText( $title->getText(), $title->getNamespace() - 1 );
-
-			// If so, check that it's a title that comments are enabled for
-			$ret = true;
-			Hooks::run( 'AjaxCommentsCheckTitle', [$userpage, &$ret] );
-			if( $ret ) {
-
-				// Use the first user account if no valid user doing the edit
-				$uid = $user->getId();
-				if( $uid < 1 ) $uid = 1;
-
-				// Check that the article being commented on exists
-				$userpageid = $userpage->getArticleID();
-				if( $userpageid ) {
-
-					// Create the comment and abort the save
-					if( is_object( $content ) ) $content = $content->getNativeData();
-					if( $content ) {
-						$content = preg_replace( '/\s*~~~~/', '', $content ); // remove sig markup
-						self::add( $content, $userpageid, $uid );
-						return false;
-					}
-				}
-			}
-		}
 		return true;
 	}
 
