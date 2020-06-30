@@ -48,7 +48,7 @@ class AjaxComments {
 		// Redirect talk pages with AjaxComments to the comments
 		if( is_object( $wgTitle ) && $wgTitle->getNamespace() > 0 && ( $wgTitle->getNamespace() & 1 ) ) {
 			$ret = true;
-			Hooks::run( 'AjaxCommentsCheckTitle', [$userpage, &$ret] );
+			Hooks::run( 'AjaxCommentsCheckTitle', [$userpage, &$ret] ); //TODO: Must be replaced
 			if( $ret ) {
 				$userpage = Title::newFromText( $wgTitle->getText(), $wgTitle->getNamespace() - 1 );
 				global $mediaWiki;
@@ -64,7 +64,6 @@ class AjaxComments {
 
 		// Load JS and CSS
 		$wgOut->addModules( 'ext.ajaxcomments' );
-		$wgOut->addModuleStyles( 'ext.ajaxcomments' );
 	}
 
 	/**
