@@ -83,7 +83,7 @@ class AjaxComments {
 		if( $title && !is_object( $title ) ) $title = Title::newFromText( $title );
 		if( !is_object( $title ) || $title->getArticleID() == 0 || $title->isRedirect() || $title->getNamespace() == 8 || ($title->getNamespace()&1) )
 			$ret = false;
-		else Hooks::run( 'AjaxCommentsCheckTitle', [$title, &$ret] );
+		else Hooks::run( 'AjaxCommentsCheckTitle', [$title, &$ret] ); //TODO: Must be replaced
 		return $ret;
 	}
 
@@ -91,17 +91,22 @@ class AjaxComments {
 	 * User is not established at ExtensionFunctions time as of 1.27
 	 */
 	public static function onParserFirstCallInit( $parser ) {
-		global $wgOut, $wgUser, $wgTitle, $wgAjaxCommentsPollServer, $wgAjaxCommentsLikeDislike;
+		global $wgUser, $wgTitle;
 
 		// Create a hook to allow external condition for whether comments can be added or replied to (default is just user logged in)
 		self::$canComment = $wgUser->isLoggedIn();
-		Hooks::run( 'AjaxCommentsCheckWritable', [$wgTitle, &self::$canComment] );
+		Hooks::run( 'AjaxCommentsCheckWritable', [$wgTitle, &self::$canComment] ); //TODO: Must be replaced
+	}
 
-		// Add JS config vars
-		$wgOut->addJsConfigVars( 'ajaxCommentsPollServer', $wgAjaxCommentsPollServer );
-		$wgOut->addJsConfigVars( 'ajaxCommentsCanComment', self::$canComment );
-		$wgOut->addJsConfigVars( 'ajaxCommentsLikeDislike', $wgAjaxCommentsLikeDislike );
-		$wgOut->addJsConfigVars( 'ajaxCommentsAdmin', self::isAdmin() );
+	/**
+	 * Add JS config vars
+	 */
+	public static function onMakeGlobalVariablesScript( &$vars, $out ) {
+		global $wgAjaxCommentsPollServer, $wgAjaxCommentsLikeDislike;
+		$vars['ajaxCommentsPollServer'] = $wgAjaxCommentsPollServer;
+		$vars['ajaxCommentsCanComment'] = self::$canComment;
+		$vars['ajaxCommentsLikeDislike'] = $wgAjaxCommentsLikeDislike;
+		$vars['ajaxCommentsAdmin'] = self::isAdmin();
 		return true;
 	}
 

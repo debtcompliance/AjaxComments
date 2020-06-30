@@ -15,7 +15,8 @@
 		"AjaxCommentsAdmins": ["sysop"],        "@": "list of groups that have admin priviliges for comments"
 	},
 	"Hooks": {
-		"ParserFirstCallInit": ["AjaxComments::onParserFirstCallInit"]
+		"ParserFirstCallInit": "AjaxComments::onParserFirstCallInit",
+		"MakeGlobalVariablesScript": "AjaxComments::onMakeGlobalVariablesScript"
 	},
 	"AutoloadClasses": {
 		"AjaxComments": "AjaxComments.class.php",
