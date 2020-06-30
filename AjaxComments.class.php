@@ -239,7 +239,7 @@ class AjaxComments {
 			$lid = $row->ac_id;
 
 			// Remove the user if they now nolonger like or dislike, 
-			if ( $like == 0 ) $dbw->delete( AJAXCOMMENTS_TABLE, array( 'ac_id' => $lid ) );
+			if ( $like == 0 ) $dbw->delete( AJAXCOMMENTS_TABLE, ['ac_id' => $lid] );
 
 			// Otherwise update their value
 			else $dbw->update( AJAXCOMMENTS_TABLE, ['ac_data' => $like], ['ac_id' => $lid] );
@@ -365,7 +365,7 @@ class AjaxComments {
 	 * Get all child comments and likes of the passed id (i.e. replies and replies of replies etc)
 	 */
 	private static function children( $id ) {
-		$children = array( $id );
+		$children = [$id];
 		$dbr = wfGetDB( DB_REPLICA );
 		$res = $dbr->select( AJAXCOMMENTS_TABLE, 'ac_id', ['ac_parent' => $id] );
 		foreach ( $res as $row ) {
@@ -380,7 +380,7 @@ class AjaxComments {
 	 */
 	public static function getComment( $row ) {
 		global $wgLang, $wgAjaxCommentsAvatars;
-		$likes = $dislikes = array();
+		$likes = $dislikes = [];
 		$dbr = wfGetDB( DB_REPLICA );
 
 		// Read the row from DB if id supplied
