@@ -268,7 +268,7 @@ class AjaxComments {
 			}
 
 			// Get list of users watching this page (excluding the user who made the comment and user notified about reply if any)
-			$dbr = wfGetDB( DB_SLAVE );
+			$dbr = wfGetDB( DB_REPLICA );
 			$cond = [
 				'wl_title' => $title->getDBkey(),
 				'wl_namespace' => $title->getNamespace(),
@@ -333,7 +333,7 @@ class AjaxComments {
 	 */
 	private static function children( $id ) {
 		$children = array( $id );
-		$dbr = wfGetDB( DB_SLAVE );
+		$dbr = wfGetDB( DB_REPLICA );
 		$res = $dbr->select( AJAXCOMMENTS_TABLE, 'ac_id', ['ac_parent' => $id] );
 		foreach( $res as $row ) $children = array_merge( $children, self::children( $row->ac_id ) );
 		return $children;
@@ -346,7 +346,7 @@ class AjaxComments {
 	public static function getComment( $row ) {
 		global $wgLang, $wgAjaxCommentsAvatars;
 		$likes = $dislikes = array();
-		$dbr = wfGetDB( DB_SLAVE );
+		$dbr = wfGetDB( DB_REPLICA );
 
 		// Read the row from DB if id supplied
 		if( is_numeric( $row ) ) {
@@ -396,7 +396,7 @@ class AjaxComments {
 		// Query DB for all comments and likes for the page (after ts if supplied)
 		$cond = array( 'ac_type' => AJAXCOMMENTS_DATATYPE_COMMENT, 'ac_page' => $page );
 		if( $ts ) $cond[] = "ac_time > $ts";
-		$dbr = wfGetDB( DB_SLAVE );
+		$dbr = wfGetDB( DB_REPLICA );
 		$res = $dbr->select(
 			AJAXCOMMENTS_TABLE,
 			'*',

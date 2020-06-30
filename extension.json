@@ -1,7 +1,7 @@
 {
 	"name": "AjaxComments",
-	"version": "2.7.4, 2019-07-14",
-	"author": ["[http://www.organicdesign.co.nz/aran Aran Dunkley]"],
+	"version": "2.8.0, 2020-07-15",
+	"author": ["[http://www.organicdesign.co.nz/aran Aran Dunkley]", "[http://absorto.dev Igor Absorto]"],
 	"url": "http://www.mediawiki.org/wiki/Extension:AjaxComments",
 	"descriptionmsg": "ajaxcomments-desc",
 	"license-name": "[https://www.gnu.org/licenses/gpl-2.0.html GNU General Public Licence 2.0] or later",
