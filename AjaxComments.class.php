@@ -9,7 +9,8 @@ class AjaxComments {
 	private static $canComment = false;
 
 	public static function onRegistration() {
-		global $wgLogTypes, $wgLogNames, $wgLogHeaders, $wgLogActions, $wgAPIModules, $wgExtensionFunctions;
+		global $wgLogTypes, $wgLogNames, $wgLogHeaders, $wgLogActions,
+			$wgAPIModules, $wgExtensionFunctions;
 
 		// Constants
 		define( 'AJAXCOMMENTS_TABLE', 'ajaxcomments' );
@@ -42,17 +43,20 @@ class AjaxComments {
 		global $wgOut, $wgTitle, $wgAjaxCommentsPollServer;
 
 		// Create a hook to allow external condition for whether there should be comments shown
-		if( !array_key_exists( 'action', $_REQUEST ) && self::checkTitle( $wgTitle ) ) Hooks::register( 'BeforePageDisplay', $this );
+		if ( !array_key_exists( 'action', $_REQUEST ) && self::checkTitle( $wgTitle ) ) {
+			Hooks::register( 'BeforePageDisplay', $this );
+		}
 		else $wgAjaxCommentsPollServer = -1;
 
 		// Redirect talk pages with AjaxComments to the comments
-		if( is_object( $wgTitle ) && $wgTitle->getNamespace() > 0 && ( $wgTitle->getNamespace() & 1 ) ) {
+		if ( is_object( $wgTitle )&& $wgTitle->getNamespace() > 0
+			&& ( $wgTitle->getNamespace() & 1 ) ) {
 			$ret = true;
 			Hooks::run( 'AjaxCommentsCheckTitle', [$userpage, &$ret] ); //TODO: Must be replaced
-			if( $ret ) {
+			if ( $ret ) {
 				$userpage = Title::newFromText( $wgTitle->getText(), $wgTitle->getNamespace() - 1 );
 				global $mediaWiki;
-				if( is_object( $mediaWiki ) ) $mediaWiki->restInPeace();
+				if ( is_object( $mediaWiki ) ) $mediaWiki->restInPeace();
 				$wgOut->disable();
 				wfResetOutputBuffers();
 				$url = $userpage->getLocalUrl();
@@ -71,8 +75,11 @@ class AjaxComments {
 	 */
 	private static function isAdmin() {
 		global $wgAjaxCommentsAdmins, $wgUser;
-		if( !is_null( self::$admin ) ) return self::$admin;
-		return self::$admin = count( array_intersect( $wgAjaxCommentsAdmins, $wgUser->getEffectiveGroups() ) ) > 0;
+		if ( !is_null( self::$admin ) ) {
+			return self::$admin;
+		}
+		self::$admin = count( array_intersect( $wgAjaxCommentsAdmins, $wgUser->getEffectiveGroups() ) ) > 0;
+		return self::$admin;
 	}
 
 	/**
@@ -80,10 +87,19 @@ class AjaxComments {
 	 */
 	public static function checkTitle( $title ) {
 		$ret = true;
-		if( $title && !is_object( $title ) ) $title = Title::newFromText( $title );
-		if( !is_object( $title ) || $title->getArticleID() == 0 || $title->isRedirect() || $title->getNamespace() == 8 || ($title->getNamespace()&1) )
+		if ( $title && !is_object( $title ) ) {
+			$title = Title::newFromText( $title );
+		}
+		if ( !is_object( $title )
+			|| $title->getArticleID() == 0
+			|| $title->isRedirect()
+			|| $title->getNamespace() == 8
+			|| ( $title->getNamespace()&1 )
+		) {
 			$ret = false;
-		else Hooks::run( 'AjaxCommentsCheckTitle', [$title, &$ret] ); //TODO: Must be replaced
+		} else {
+			Hooks::run( 'AjaxCommentsCheckTitle', [$title, &$ret] ); //TODO: Must be replaced
+		}
 		return $ret;
 	}
 
@@ -93,7 +109,9 @@ class AjaxComments {
 	public static function onParserFirstCallInit( $parser ) {
 		global $wgUser, $wgTitle;
 
-		// Create a hook to allow external condition for whether comments can be added or replied to (default is just user logged in)
+		// Create a hook to allow external condition for whether comments can
+		// be added or replied to (default is just user logged in)
+		// FIXME: breaking JS rc-filters
 		self::$canComment = $wgUser->isLoggedIn();
 		Hooks::run( 'AjaxCommentsCheckWritable', [$wgTitle, &self::$canComment] ); //TODO: Must be replaced
 	}
@@ -111,10 +129,12 @@ class AjaxComments {
 	}
 
 	/**
-	 * Render a name at the end of the page so redirected talk pages can go there before ajax loads the content,
+	 * Render a name at the end of the page so redirected talk pages can go
+	 * there before ajax loads the content,
 	 */
 	public function onBeforePageDisplay( $out, $skin ) {
-		$out->addHtml( '<h2>' . wfMessage( 'ajaxcomments-heading' )->text() . '</h2><a id="ajaxcomments-name" name="ajaxcomments"></a>' );
+		$out->addHtml( '<h2>' . wfMessage( 'ajaxcomments-heading' )->text()
+			. '</h2><a id="ajaxcomments-name" name="ajaxcomments"></a>' );
 		return true;
 	}
 
@@ -143,6 +163,7 @@ class AjaxComments {
 	public static function edit( $text, $page, $id ) {
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->update( AJAXCOMMENTS_TABLE, ['ac_data' => $text], ['ac_id' => $id] );
+		// FIXME: Why the hook is commented here?
 		//Hooks::run( 'AjaxCommentsChange', ['edit', $page, $id] );
 		return self::comment( 'edit', $page, $id );
 	}
@@ -166,7 +187,7 @@ class AjaxComments {
 		];
 		$dbw->insert( AJAXCOMMENTS_TABLE, $row );
 		$id = $dbw->insertId();
-		Hooks::run( 'AjaxCommentsChange', ['reply', $page, $id] );
+		Hooks::run( 'AjaxCommentsChange', ['reply', $page, $id] ); //TODO: must be replaced
 		return self::comment( 'reply', $page, $id );
 	}
 
@@ -178,14 +199,16 @@ class AjaxComments {
 		$dbw = wfGetDB( DB_MASTER );
 
 		// Die if the comment is not owned by this user unless sysop
-		if( !self::isAdmin() ) {
+		if ( !self::isAdmin() ) {
 			$row = $dbw->selectRow( AJAXCOMMENTS_TABLE, 'ac_user', ['ac_id' => $id] );
-			if( $row->ac_user != $wgUser->getId() ) return "Only admins can delete someone else's comment";
+			if ( $row->ac_user != $wgUser->getId() ) {
+				return "Only admins can delete someone else's comment";
+			}
 		}
 
 		// Delete this comment and all child comments and likes
 		$children = self::children( $id );
-		Hooks::run( 'AjaxCommentsChange', ['delete', $page, $children] );
+		Hooks::run( 'AjaxCommentsChange', ['delete', $page, $children] ); //TODO: must be replaced
 		$dbw->delete( AJAXCOMMENTS_TABLE, 'ac_id IN (' . implode( ',', $children ) . ')' );
 		self::comment( 'del', $page, $id );
 		return $children;
@@ -210,13 +233,13 @@ class AjaxComments {
 		] );
 
 		// If there is an existing value,
-		if( $row ) {
-			if( $val == $row->ac_data ) return false; // Already liked/disliked
+		if ( $row ) {
+			if ( $val == $row->ac_data ) return false; // Already liked/disliked
 			$like = $row->ac_data + $val;
 			$lid = $row->ac_id;
 
 			// Remove the user if they now nolonger like or dislike, 
-			if( $like == 0 ) $dbw->delete( AJAXCOMMENTS_TABLE, array( 'ac_id' => $lid ) );
+			if ( $like == 0 ) $dbw->delete( AJAXCOMMENTS_TABLE, array( 'ac_id' => $lid ) );
 
 			// Otherwise update their value
 			else $dbw->update( AJAXCOMMENTS_TABLE, ['ac_data' => $like], ['ac_id' => $lid] );
@@ -234,12 +257,18 @@ class AjaxComments {
 		}
 
 		// Return a message string about the update
-		if( $val > 0 ) {
-			if( $like == 0 ) return wfMessage( 'ajaxcomments-undislike', $name, $cname )->text();
-			else return wfMessage( 'ajaxcomments-like', $name, $cname )->text();
+		if ( $val > 0 ) {
+			if ( $like == 0 ) {
+				return wfMessage( 'ajaxcomments-undislike', $name, $cname )->text();
+			} else {
+				return wfMessage( 'ajaxcomments-like', $name, $cname )->text();
+			}
 		} else {
-			if( $like == 0 ) return wfMessage( 'ajaxcomments-unlike', $name, $cname )->text();
-			else return wfMessage( 'ajaxcomments-dislike', $name, $cname )->text();
+			if ( $like == 0 ) {
+				return wfMessage( 'ajaxcomments-unlike', $name, $cname )->text();
+			} else {
+				return wfMessage( 'ajaxcomments-dislike', $name, $cname )->text();
+			}
 		}
 	}
 
@@ -255,14 +284,14 @@ class AjaxComments {
 		$log->addEntry( $type, $title, $summary, [$pagename] );
 
 		// Notify by email if config enabled
-		if( $wgAjaxCommentsEmailNotify && $type != 'del' ) {
+		if ( $wgAjaxCommentsEmailNotify && $type != 'del' ) {
 			$comment = self::getComment( $id );
 
 			// Get the parent comment if any
 			$parent = $comment['parent'] ? self::getComment( $comment['parent'] ) : false;
 
 			// Send to the reply-parent item's author (maybe send to the whole chain later)
-			if( $parent && ( $type == 'reply' || $type == 'edit' ) ) {
+			if ( $parent && ( $type == 'reply' || $type == 'edit' ) ) {
 				$user = User::newFromId( $parent['user'] );
 				$lang = $user->getOption( 'language' );
 				$body = wfMessage( "ajaxcomments-email-reply-$type", $pagename, $comment['name'] )->text();
@@ -278,16 +307,16 @@ class AjaxComments {
 				'wl_namespace' => $title->getNamespace(),
 				'wl_user <> ' . $comment['user']
 			];
-			if( $parent ) $cond[] = 'wl_user <> ' . $parent['user'];
+			if ( $parent ) $cond[] = 'wl_user <> ' . $parent['user'];
 			$res = $dbr->select( 'watchlist', ['wl_user'], $cond, __METHOD__ );
 			wfDebugLog( __CLASS__, "Watcher query: " . $dbr->lastQuery() );
 			$watchers = [];
-			foreach( $res as $row ) $watchers[$row->wl_user] = true;
+			foreach ( $res as $row ) $watchers[$row->wl_user] = true;
 
 			// If this is a user page, ensure the user is listed as a watcher (unless it's the same user that created the comment)
-			if( $title->getNamespace() == NS_USER ) {
+			if ( $title->getNamespace() == NS_USER ) {
 				$uid = User::newFromName( $title->getText() )->getId();
-				if( $uid != $comment['user'] ) {
+				if ( $uid != $comment['user'] ) {
 					$watchers[$uid] = true;
 					wfDebugLog( __CLASS__, "Comment is on a user page, adding user id $uid to the watchers email list" );
 				}
@@ -296,11 +325,11 @@ class AjaxComments {
 			// Loop through all watchers in the list
 			$watchers = array_keys( $watchers );
 			wfDebugLog( __CLASS__, "Sending to watchers: " . implode( ',', $watchers ) );
-			foreach( $watchers as $uid ) {
+			foreach ( $watchers as $uid ) {
 				$watcher = User::newFromId( $uid );
 
 				// If this watcher wants to be notified by email of watchlist changes, and the comment is something to notify about,
-				if( $watcher->getOption( 'enotifwatchlistpages' ) && $watcher->isEmailConfirmed()
+				if ( $watcher->getOption( 'enotifwatchlistpages' ) && $watcher->isEmailConfirmed()
 					&& ( $type == 'add' || $type == 'reply' || $type == 'edit' )
 				) {
 					// Compose the email and send
@@ -339,7 +368,9 @@ class AjaxComments {
 		$children = array( $id );
 		$dbr = wfGetDB( DB_REPLICA );
 		$res = $dbr->select( AJAXCOMMENTS_TABLE, 'ac_id', ['ac_parent' => $id] );
-		foreach( $res as $row ) $children = array_merge( $children, self::children( $row->ac_id ) );
+		foreach ( $res as $row ) {
+			$children = array_merge( $children, self::children( $row->ac_id ) );
+		}
 		return $children;
 	}
 
@@ -353,14 +384,14 @@ class AjaxComments {
 		$dbr = wfGetDB( DB_REPLICA );
 
 		// Read the row from DB if id supplied
-		if( is_numeric( $row ) ) {
+		if ( is_numeric( $row ) ) {
 			$id = $row;
 			$row = $dbr->selectRow( AJAXCOMMENTS_TABLE, '*', ['ac_id' => $id] );
-			if( !$row ) die( "Error: Comment $id not found" );
+			if ( !$row ) die( "Error: Comment $id not found" );
 		}
 
 		// Get the like data for this comment
-		if( $row->ac_type == AJAXCOMMENTS_DATATYPE_COMMENT ) {
+		if ( $row->ac_type == AJAXCOMMENTS_DATATYPE_COMMENT ) {
 			$res = $dbr->select(
 				AJAXCOMMENTS_TABLE,
 				'ac_user,ac_data',
@@ -368,7 +399,7 @@ class AjaxComments {
 				__METHOD__,
 				['ORDER BY' => 'ac_time']
 			);
-			foreach( $res as $like ) {
+			foreach ( $res as $like ) {
 				$name = User::newFromId( $like->ac_user )->getName();
 				$like->ac_data > 0 ? $likes[] = $name : $dislikes[] = $name;
 			}
@@ -388,7 +419,8 @@ class AjaxComments {
 			'like'    => $likes,
 			'dislike' => $dislikes,
 			'avatar'  => $wgAjaxCommentsAvatars && $user->isEmailConfirmed()
-				? "https://www.gravatar.com/avatar/" . md5( strtolower( $user->getEmail() ) ) . "?s=50&d=wavatar" : false
+				? "https://www.gravatar.com/avatar/" . md5( strtolower( $user->getEmail() ) ) . "?s=50&d=wavatar"
+				: false
 		];
 	}
 
@@ -398,8 +430,8 @@ class AjaxComments {
 	public static function getComments( $page, $ts = false ) {
 
 		// Query DB for all comments and likes for the page (after ts if supplied)
-		$cond = array( 'ac_type' => AJAXCOMMENTS_DATATYPE_COMMENT, 'ac_page' => $page );
-		if( $ts ) $cond[] = "ac_time > $ts";
+		$cond = [ 'ac_type' => AJAXCOMMENTS_DATATYPE_COMMENT, 'ac_page' => $page ];
+		if ( $ts ) $cond[] = "ac_time > $ts";
 		$dbr = wfGetDB( DB_REPLICA );
 		$res = $dbr->select(
 			AJAXCOMMENTS_TABLE,
@@ -410,7 +442,7 @@ class AjaxComments {
 		);
 
 		$comments = [];
-		foreach( $res as $row ) $comments[] = self::getComment( $row );
+		foreach ( $res as $row ) $comments[] = self::getComment( $row );
 		return $comments;
 	}
 
