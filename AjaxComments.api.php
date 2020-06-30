@@ -36,10 +36,10 @@ class ApiAjaxComments extends ApiBase {
 			case 'like':
 				$msg = AjaxComments::like( $data, $id );
 				$comment = AjaxComments::getComment( $id );
-				$result = array(
+				$result = [
 					'like' => $comment['like'],
 					'dislike' => $comment['dislike']
-				);
+				];
 			break;
 
 			case 'get':
@@ -47,7 +47,7 @@ class ApiAjaxComments extends ApiBase {
 			break;
 
 			default:
-				$result = array( 'error' => 'unknown action' );
+				$result = ['error' => 'unknown action'];
 		}
 
 		// Return the result data
@@ -63,22 +63,22 @@ class ApiAjaxComments extends ApiBase {
 	}
 
 	public function getAllowedParams( $flags = 0 ) {
-		return array(
-			'type' => array(
+		return [
+			'type' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => true
-			),
-			'page' => array(
+			],
+			'page' => [
 				ApiBase::PARAM_TYPE => 'integer',
 				ApiBase::PARAM_REQUIRED => true
-			),
-			'id' => array(
+			],
+			'id' => [
 				ApiBase::PARAM_TYPE => 'integer',
-			),
-			'data' => array(
+			],
+			'data' => [
 				ApiBase::PARAM_TYPE => 'string',
-			),
-		);
+			],
+		];
 	}
 
 	public function getHelpUrls() {
