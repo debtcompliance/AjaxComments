@@ -37,6 +37,13 @@ class AjaxComments {
 	}
 
 	/**
+	 * Singleton object allowing common access to non-static methods
+	 */
+	public static function singleton() {
+		return self::$instance;
+	}
+
+	/**
 	 * Using this hook for setup so that user and title are setup
 	 */
 	public function onUserGetRights( $user, &$rights ) {
