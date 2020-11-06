@@ -2,41 +2,41 @@ $(document).ready( function() {
 
 	"use strict";
 
-	// Client copy of all comments on this page
-	var comments = {};
-	var count = 0;
-
 	// Remember ID of this page for ajax requests
-	var page = mw.config.get('wgArticleId');
+	const page = mw.config.get('wgArticleId');
 
 	// User info
-	var user = mw.config.get('wgUserId');
-	var username = mw.config.get('wgUserName');
-	var groups = mw.config.get('wgUserGroups');
-	var sysop = mw.config.get('ajaxCommentsAdmin');
+	const user = mw.config.get('wgUserId');
+	const username = mw.config.get('wgUserName');
+	const groups = mw.config.get('wgUserGroups');
+	const sysop = mw.config.get('ajaxCommentsAdmin');
 
 	// Is the user allowed to add comments/edit etc?
-	var canComment = mw.config.get('ajaxCommentsCanComment');
+	const canComment = mw.config.get('ajaxCommentsCanComment');
 
 	// Are we using like/dislike links?
-	var likeDislike = mw.config.get('ajaxCommentsLikeDislike');
+	const likeDislike = mw.config.get('ajaxCommentsLikeDislike');
+
+	// Client copy of all comments on this page
+	let comments = {};
+	let count = 0;
 
 	// Remember latest comment received
-	var timestamp = 0;
+	let timestamp = 0;
 
 	// Whether WebSocket is available
-	var ws = false;
+	let ws = false;
 
 	// Names for our events that is specific to this article on this wiki
-	var prefix = mw.config.get('wsWikiID') + page + ':';
-	var wsRender = prefix + 'Render';
-	var wsDelete = prefix + 'Delete';
+	let prefix = mw.config.get('wsWikiID') + page + ':';
+	let wsRender = prefix + 'Render';
+	let wsDelete = prefix + 'Delete';
 
 	// Get the Ajax polling rate (-1 means comments are disabled for this page)
-	var poll = mw.config.get('ajaxCommentsPollServer');
+	let poll = mw.config.get('ajaxCommentsPollServer');
 
 	// Most of the ajax request data is the same for all requests
-	var request = {
+	let request = {
 		type: 'POST',
 		url: mw.util.wikiScript('api'),
 		data: {
@@ -85,7 +85,7 @@ $(document).ready( function() {
 	 * An delete link has been clicked
 	 */
 	function del(idlist, notify) {
-		var i, id, buttons;
+		let i, id, buttons;
 		for( i = 0; i < idlist.length; i++ ) {
 			id = idlist[i];
 			if(notify) {
@@ -110,7 +110,7 @@ $(document).ready( function() {
 	 * Do the actual delete
 	 */
 	function delReal(id, page, notify) {
-		var i, e;
+		let i, e;
 		console.log('AjaxComments: del(' + id + ')');
 
 		// Replace the comment content with a loader
@@ -122,7 +122,7 @@ $(document).ready( function() {
 		request.data.page = page;
 		request.data.id = id;
 		request.success = function(json) {
-			var data = json.ajaxcomments;
+			let data = json.ajaxcomments;
 
 			// Delete the this comment's visual element (which contains all replies)
 			e.fadeOut(500);
@@ -144,7 +144,7 @@ $(document).ready( function() {
 	 * - the returned response is the new like/dislike links
 	 */
 	function like(id, val) {
-		var e = $('#ajaxcomment-' + id);
+		let e = $('#ajaxcomment-' + id);
 		console.log('AjaxComments: ' + (val < 0 ? 'dis' : '') + 'like(' + id + ')');
 		e.addClass('loading');
 		request.data.type = 'like';
@@ -152,8 +152,8 @@ $(document).ready( function() {
 		request.data.id = id;
 		request.data.data = val;
 		request.success = function(json) {
-			var data = json.ajaxcomments;
-			var c = comments[id];
+			let data = json.ajaxcomments;
+			let c = comments[id];
 			c['like'] = data.like;
 			c['dislike'] = data.dislike;
 			renderComments([c]);
@@ -166,7 +166,7 @@ $(document).ready( function() {
 	 * Open a comment input box to add, edit or reply
 	 */
 	function input(type, id) {
-		var c, html, sel = '#ajaxcomment-' + id;
+		let c, html, sel = '#ajaxcomment-' + id;
 
 		// Don't add if add already open
 		if(type == 'add' && $('#ajaxcomment-0').length > 0) return;
@@ -241,7 +241,7 @@ $(document).ready( function() {
 	 * Submit a new comment, edit or reply
 	 */
 	function submit(type, id) {
-		var text, e = $('#ajaxcomment-' + ( type == 'reply' ? '0' : id ) );
+		let text, e = $('#ajaxcomment-' + ( type == 'reply' ? '0' : id ) );
 		console.log('AjaxComments: ' + type + '(' + id + ')');
 
 		// Get the new text from the textarea and remove it
@@ -258,7 +258,7 @@ $(document).ready( function() {
 		request.data.id = id;
 		request.data.data = text;
 		request.success = function(json) {
-			var data = json.ajaxcomments;
+			let data = json.ajaxcomments;
 			$('#ajaxcomment-0').remove();
 			renderComments([data]);
 			if (ws) webSocket.send(wsRender, [data]);
@@ -271,7 +271,7 @@ $(document).ready( function() {
 	 * - this may be new comments to insert or prepend, or ones that need to be replaced
 	 */
 	function renderComments(data) {
-		var i, replies, sel, bsel, c, html;
+		let i, replies, sel, bsel, c, html;
 		
 		// If first render,
 		if($('#ajaxcomments').hasClass('ajaxcomments-loader')) {
@@ -280,7 +280,7 @@ $(document).ready( function() {
 			$('#ajaxcomments').removeClass('ajaxcomments-loader');
 
 			// If canComment, include an add comment button
-			var html = canComment
+			let html = canComment
 				? '<button id="ajaxcomments-add">' + mw.message('ajaxcomments-add').text() + '</button>'
 				: '<i>' + mw.message('ajaxcomments-anon').text() + '</i>';
 			$('#ajaxcomments').before('<div class="ajaxcomment-links">' + html + '</div>');
@@ -336,9 +336,9 @@ $(document).ready( function() {
 	 * Render a single comment as HTML (without its replies)
 	 */
 	function renderComment(c, input) {
-		var hash = window.location.hash == '#comment' + c.id ? ' selected' : '';                                          // Make this comment selected if t's ID is in the # fragment
-		var ulink = '<a href="' + mw.util.getUrl('User:' + c.name) + '" title="' + c.name + '">' + c.name + '</a>';       // Link to user page
-		var html = '<div class="ajaxcomment-container" id="ajaxcomment-' + c.id + '">'
+		let hash = window.location.hash == '#comment' + c.id ? ' selected' : '';                                          // Make this comment selected if t's ID is in the # fragment
+		let ulink = '<a href="' + mw.util.getUrl('User:' + c.name) + '" title="' + c.name + '">' + c.name + '</a>';       // Link to user page
+		let html = '<div class="ajaxcomment-container" id="ajaxcomment-' + c.id + '">'
 			+ '<a name="comment' + c.id + '"></a><div class="ajaxcomment' + hash + '">'                                     // Allow scrolling to the comment with #
 			+ '<div class="ajaxcomment-sig">' + mw.message('ajaxcomments-sig', ulink, c.date ).text() + '</div>'            // Signature
 			+ ( c.avatar ? '<div class="ajaxcomment-icon"><img src="' + c.avatar + '" alt="' + c.name + '" /></div>' : '' ) // Avatar
@@ -371,7 +371,7 @@ $(document).ready( function() {
 	 * Render a like or dislike button for the passed comment
 	 */
 	function likeButton(c, type) {
-		var i, csv = '', sep = '', names = c[type], len = names.length, title = '';
+		let i, csv = '', sep = '', names = c[type], len = names.length, title = '';
 
 		// Format the list of names
 		if(len < 1) title = mw.message('ajaxcomments-no' + type).text();
@@ -391,7 +391,7 @@ $(document).ready( function() {
 	 * Return whether or not the passed object has any keys without iterating over it or using Object.keys
 	 */
 	function hasKeys(o) {
-		var i = false;
+		let i = false;
 		for(i in o) break;
 		return i !== false;
 	};
