@@ -32,7 +32,7 @@
 .ajaxcomment-container.loading .replies .loader {
 	background: none;
 }
-.ajaxcomment-new .ajaxcomment-text {
+.ajaxcomment-0 .ajaxcomment-text {
 	height: 80px;
 }
 #ajaxcomments-wrapper button {

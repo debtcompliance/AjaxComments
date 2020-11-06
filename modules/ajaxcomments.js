@@ -169,7 +169,7 @@ $(document).ready( function() {
 		var c, html, sel = '#ajaxcomment-' + id;
 
 		// Don't add if add already open
-		if(type == 'add' && $('#ajaxcomment-new').length > 0) return;
+		if(type == 'add' && $('#ajaxcomment-0').length > 0) return;
 
 		// Cancel any existing inputs
 		cancel();
@@ -186,7 +186,7 @@ $(document).ready( function() {
 		// If replying or adding, create a new empty comment structure with the input in it
 		if(type == 'add' || type == 'reply') {
 			html = renderComment({
-				id: 'new',
+				id: 0,
 				parent: type == 'add' ? null : id,
 				user: user,
 				name: username,
@@ -205,9 +205,9 @@ $(document).ready( function() {
 		else if(type == 'edit') $(sel + ' .ajaxcomment-text:first').after(html);
 		else if(type == 'reply') {
 			$(sel + ' .replies:first').prepend(html);
-			sel = '#ajaxcomment-new';
+			sel = '#ajaxcomment-0';
 		}
-		if(type == 'add' || type == 'reply') $('#ajaxcomment-new').fadeIn(500);
+		if(type == 'add' || type == 'reply') $('#ajaxcomment-0').fadeIn(500);
 
 		// Hide the buttons, avatar and text
 		$(sel + ' .buttons:first').hide()
@@ -226,7 +226,9 @@ $(document).ready( function() {
 	 * Remove any current comment input box, or new comment
 	 */
 	function cancel() {
-		if($('#ajaxcomment-new').length > 0) return $('#ajaxcomment-new').fadeOut(300, function() { $('#ajaxcomment-new').remove(); });
+		if ($('#ajaxcomment-0').length > 0) return $('#ajaxcomment-0').fadeOut(300, function() {
+			$('#ajaxcomment-0').remove();
+		});
 		$('#ajaxcomment-input button').hide();
 		$('#ajaxcomment-input').fadeOut(300, function() { $(this).remove(); });
 		$('.ajaxcomment-icon').show();
@@ -239,7 +241,7 @@ $(document).ready( function() {
 	 * Submit a new comment, edit or reply
 	 */
 	function submit(type, id) {
-		var text, e = $('#ajaxcomment-' + ( type == 'reply' ? 'new' : id ) );
+		var text, e = $('#ajaxcomment-' + ( type == 'reply' ? '0' : id ) );
 		console.log('AjaxComments: ' + type + '(' + id + ')');
 
 		// Get the new text from the textarea and remove it
@@ -257,9 +259,9 @@ $(document).ready( function() {
 		request.data.data = text;
 		request.success = function(json) {
 			var data = json.ajaxcomments;
-			$('#ajaxcomment-new').remove();
+			$('#ajaxcomment-0').remove();
 			renderComments([data]);
-			if(ws) webSocket.send(wsRender, [data]);
+			if (ws) webSocket.send(wsRender, [data]);
 		};
 		$.ajax(request);
 	}
@@ -282,7 +284,7 @@ $(document).ready( function() {
 				? '<button id="ajaxcomments-add">' + mw.message('ajaxcomments-add').text() + '</button>'
 				: '<i>' + mw.message('ajaxcomments-anon').text() + '</i>';
 			$('#ajaxcomments').before('<div class="ajaxcomment-links">' + html + '</div>');
-			$('#ajaxcomments-add').click(function() { input('add', 'new'); });
+			$('#ajaxcomments-add').click(function() { input('add', '0'); });
 		}
 
 		// Copy all the data into the main comments data structure with rendered html
@@ -334,8 +336,8 @@ $(document).ready( function() {
 	 * Render a single comment as HTML (without its replies)
 	 */
 	function renderComment(c, input) {
-		var hash = window.location.hash == '#comment' + c.id ? ' selected' : '';                                            // Make this comment selected if t's ID is in the # fragment
-		var ulink = '<a href="' + mw.util.getUrl('User:' + c.name) + '" title="' + c.name + '">' + c.name + '</a>';         // Link to user page
+		var hash = window.location.hash == '#comment' + c.id ? ' selected' : '';                                          // Make this comment selected if t's ID is in the # fragment
+		var ulink = '<a href="' + mw.util.getUrl('User:' + c.name) + '" title="' + c.name + '">' + c.name + '</a>';       // Link to user page
 		var html = '<div class="ajaxcomment-container" id="ajaxcomment-' + c.id + '">'
 			+ '<a name="comment' + c.id + '"></a><div class="ajaxcomment' + hash + '">'                                     // Allow scrolling to the comment with #
 			+ '<div class="ajaxcomment-sig">' + mw.message('ajaxcomments-sig', ulink, c.date ).text() + '</div>'            // Signature
