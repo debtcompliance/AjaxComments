@@ -2,6 +2,10 @@ $(document).ready( function() {
 
 	"use strict";
 
+	// Client copy of all comments on this page
+	let comments = {};
+	let count = 0;
+
 	// Remember ID of this page for ajax requests
 	const page = mw.config.get('wgArticleId');
 
@@ -16,10 +20,6 @@ $(document).ready( function() {
 
 	// Are we using like/dislike links?
 	const likeDislike = mw.config.get('ajaxCommentsLikeDislike');
-
-	// Client copy of all comments on this page
-	let comments = {};
-	let count = 0;
 
 	// Remember latest comment received
 	let timestamp = 0;
@@ -226,9 +226,7 @@ $(document).ready( function() {
 	 * Remove any current comment input box, or new comment
 	 */
 	function cancel() {
-		if ($('#ajaxcomment-0').length > 0) return $('#ajaxcomment-0').fadeOut(300, function() {
-			$('#ajaxcomment-0').remove();
-		});
+		if($('#ajaxcomment-0').length > 0) return $('#ajaxcomment-0').fadeOut(300, function() { $('#ajaxcomment-0').remove(); });
 		$('#ajaxcomment-input button').hide();
 		$('#ajaxcomment-input').fadeOut(300, function() { $(this).remove(); });
 		$('.ajaxcomment-icon').show();
@@ -284,7 +282,7 @@ $(document).ready( function() {
 				? '<button id="ajaxcomments-add">' + mw.message('ajaxcomments-add').text() + '</button>'
 				: '<i>' + mw.message('ajaxcomments-anon').text() + '</i>';
 			$('#ajaxcomments').before('<div class="ajaxcomment-links">' + html + '</div>');
-			$('#ajaxcomments-add').click(function() { input('add', '0'); });
+			$('#ajaxcomments-add').click(function() { input('add', 0); });
 		}
 
 		// Copy all the data into the main comments data structure with rendered html

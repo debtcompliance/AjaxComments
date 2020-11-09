@@ -15,7 +15,7 @@ class ApiAjaxComments extends ApiBase {
 		$data   = array_key_exists( 'data', $params ) ? $params['data'] : '';
 
 		// Process the request
-		switch( $type ) {
+		switch ( $type ) {
 
 			case 'add':
 				$result = AjaxComments::add( $data, $page );
@@ -47,7 +47,7 @@ class ApiAjaxComments extends ApiBase {
 			break;
 
 			default:
-				$result = ['error' => 'unknown action'];
+				$result = [ 'error' => 'unknown action' ];
 		}
 
 		// Return the result data
