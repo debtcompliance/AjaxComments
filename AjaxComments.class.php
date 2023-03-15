@@ -151,7 +151,7 @@ class AjaxComments {
 	 */
 	public static function onArticleViewHeader( &$article, &$outputDone, &$pcache ) {
 		global $wgUser;
-		self::$canComment = $wgUser->isLoggedIn();
+		self::$canComment = $wgUser->isRegistered();
 		MediaWikiServices::getInstance()->getHookContainer()->run(
 			'AjaxCommentsCheckWritable', [ $article->getTitle(), &self::$canComment ] );
 	}
