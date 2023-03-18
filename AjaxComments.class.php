@@ -84,18 +84,22 @@ class AjaxComments {
 		}
 
 		// Load JS and CSS
-		$wgOut->addModules( 'ext.ajaxcomments' );
+		$wgOut->addModules( [ 'ext.ajaxcomments' ] );
 	}
 
 	/**
 	 * Determine if the current user is an admin for comments
 	 */
 	private static function isAdmin() {
-		global $wgAjaxCommentsAdmins, $wgUser;
+		global $wgAjaxCommentsAdmins;
+
 		if ( self::$admin === null ) {
 			return self::$admin;
 		}
-		self::$admin = count( array_intersect( $wgAjaxCommentsAdmins, $wgUser->getEffectiveGroups() ) ) > 0;
+
+		$user = RequestContext::getMain()->getUser();
+
+		self::$admin = count( array_intersect( $wgAjaxCommentsAdmins, $user->getEffectiveGroups() ) ) > 0;
 		return self::$admin;
 	}
 
@@ -150,8 +154,7 @@ class AjaxComments {
 	 * - default is just user logged in
 	 */
 	public static function onArticleViewHeader( &$article, &$outputDone, &$pcache ) {
-		global $wgUser;
-		self::$canComment = $wgUser->isRegistered();
+		self::$canComment = RequestContext::getMain()->getUser()->isRegistered();
 		MediaWikiServices::getInstance()->getHookContainer()->run(
 			'AjaxCommentsCheckWritable', [ $article->getTitle(), &self::$canComment ] );
 	}
@@ -160,11 +163,10 @@ class AjaxComments {
 	 * Add a new comment to the data structure, return it's insert ID
 	 */
 	public static function add( $text, $page, $user = false ) {
-		global $wgUser;
 		$dbw = wfGetDB( DB_MASTER );
 		$row = [
 			'ac_type' => AJAXCOMMENTS_DATATYPE_COMMENT,
-			'ac_user' => $user ?: $wgUser->getId(),
+			'ac_user' => $user ?: RequestContext::getMain()->getUser()->getId(),
 			'ac_page' => $page,
 			'ac_time' => time(),
 			'ac_data' => $text,
@@ -191,8 +193,7 @@ class AjaxComments {
 	 * - return the new comment in client-ready format
 	 */
 	public static function reply( $text, $page, $parent ) {
-		global $wgUser;
-		$uid = $wgUser->getId();
+		$uid = RequestContext::getMain()->getUser()->getId();
 		$ts = time();
 		$dbw = wfGetDB( DB_MASTER );
 		$row = [
@@ -215,13 +216,13 @@ class AjaxComments {
 	 * Delete a comment amd all its replies from the data structure
 	 */
 	public static function delete( $page, $id ) {
-		global $wgUser, $wgAjaxCommentsAdmins;
+		global $wgAjaxCommentsAdmins;
 		$dbw = wfGetDB( DB_MASTER );
 
 		// Die if the comment is not owned by this user unless sysop
 		if ( !self::isAdmin() ) {
 			$row = $dbw->selectRow( AJAXCOMMENTS_TABLE, 'ac_user', [ 'ac_id' => $id ] );
-			if ( $row->ac_user != $wgUser->getId() ) {
+			if ( $row->ac_user != RequestContext::getMain()->getUser()->getId() ) {
 				return "Only admins can delete someone else's comment";
 			}
 		}
@@ -240,11 +241,13 @@ class AjaxComments {
 	 * Like/unlike a comment returning a message describing the change
 	 */
 	public static function like( $val, $id ) {
-		global $wgUser;
 		$dbw = wfGetDB( DB_MASTER );
 		$row = $dbw->selectRow( AJAXCOMMENTS_TABLE, 'ac_user', [ 'ac_id' => $id ] );
-		$uid = $wgUser->getId();
-		$name = $wgUser->getName();
+
+		$user = RequestContext::getMain()->getUser();
+
+		$uid = $user->getId();
+		$name = $user->getName();
 		$cname = User::newFromId( $row->ac_user )->getName();
 
 		// Get this users like value for this comment if any
@@ -521,10 +524,9 @@ class AjaxComments {
 	 * Parse wikitext
 	 */
 	private static function parse( $text, $page ) {
-		global $wgUser;
 		$title = Title::newFromId( $page );
 		$parser = MediaWikiServices::getInstance()->getParser();
-		$options = ParserOptions::newFromUser( $wgUser );
+		$options = ParserOptions::newFromUser( RequestContext::getMain()->getUser() );
 		return $parser->parse( $text, $title, $options, true, true )->getText();
 	}
 }
