@@ -447,7 +447,7 @@ class AjaxComments {
 	 * - row can be a comment id or a db row structure
 	 */
 	public static function getComment( $row ) {
-		global $wgLang, $wgAjaxCommentsAvatars;
+		global $wgAjaxCommentsAvatars;
 		$likes = $dislikes = [];
 		$dbr = wfGetDB( DB_REPLICA );
 
@@ -477,13 +477,14 @@ class AjaxComments {
 
 		// Convert to client-ready format
 		$user = User::newFromId( $row->ac_user );
+		$lang = RequestContext::getMain()->getLanguage();
 		return [
 			'id'      => $row->ac_id,
 			'parent'  => $row->ac_parent,
 			'user'    => $row->ac_user,
 			'name'    => $user->getName(),
 			'time'    => $row->ac_time,
-			'date'    => $wgLang->timeanddate( $row->ac_time, true ),
+			'date'    => $lang->timeanddate( $row->ac_time, true ),
 			'text'    => $row->ac_data,
 			'html'    => self::parse( $row->ac_data, $row->ac_page ),
 			'like'    => $likes,
