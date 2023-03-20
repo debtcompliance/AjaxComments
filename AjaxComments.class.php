@@ -316,7 +316,7 @@ class AjaxComments {
 		$pagename = $title->getPrefixedText();
 		$summary = wfMessage( "ajaxcomments-$type-summary", $pagename, $id )->text();
 		$log = new LogPage( 'ajaxcomments', true );
-		$log->addEntry( $type, $title, $summary, [ $pagename ] );
+		$log->addEntry( $type, $title, $summary, [ $pagename ], RequestContext::getMain()->getUser() );
 
 		// Notify by email if config enabled
 		if ( $wgAjaxCommentsEmailNotify && $type != 'del' ) {
