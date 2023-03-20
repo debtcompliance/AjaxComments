@@ -50,31 +50,34 @@ class AjaxComments {
 	 * Using this hook for setup so that user and title are setup
 	 */
 	public function onUserGetRights( $user, &$rights ) {
-		global $wgOut, $wgTitle, $wgAjaxCommentsPollServer;
+		global $wgAjaxCommentsPollServer;
 
 		$hookContainer = MediaWikiServices::getInstance()->getHookContainer();
 
+		$out = RequestContext::getMain()->getOutput();
+		$title = RequestContext::getMain()->getTitle();
+
 		// Create a hook to allow external condition for whether there should be comments shown
-		if ( !array_key_exists( 'action', $_REQUEST ) && self::checkTitle( $wgTitle ) ) {
+		if ( !array_key_exists( 'action', $_REQUEST ) && self::checkTitle( $title ) ) {
 			$hookContainer->register( 'BeforePageDisplay', $this );
 		} else {
 			$wgAjaxCommentsPollServer = -1;
 		}
 
 		// Redirect talk pages with AjaxComments to the comments
-		if ( is_object( $wgTitle )
-			&& $wgTitle->getNamespace() > 0
-			&& ( $wgTitle->getNamespace() & 1 )
+		if ( is_object( $title )
+			&& $title->getNamespace() > 0
+			&& ( $title->getNamespace() & 1 )
 		) {
 			$ret = true;
 			$hookContainer->run( 'AjaxCommentsCheckTitle', [ $userpage, &$ret ] );
 			if ( $ret ) {
-				$userpage = Title::newFromText( $wgTitle->getText(), $wgTitle->getNamespace() - 1 );
+				$userpage = Title::newFromText( $title->getText(), $title->getNamespace() - 1 );
 				global $wgMediaWiki;
 				if ( is_object( $wgMediaWiki ) ) {
 					$wgMediaWiki->restInPeace();
 				}
-				$wgOut->disable();
+				$out->disable();
 				wfResetOutputBuffers();
 				$url = $userpage->getLocalUrl();
 				header( "Location: $url#ajaxcomments" );
@@ -84,7 +87,7 @@ class AjaxComments {
 		}
 
 		// Load JS and CSS
-		$wgOut->addModules( [ 'ext.ajaxcomments' ] );
+		$out->addModules( [ 'ext.ajaxcomments' ] );
 	}
 
 	/**
