@@ -1,4 +1,9 @@
 <?php
+
+use MediaWiki\MediaWikiServices;
+use MediaWiki\Revision\RevisionRecord;
+use MediaWiki\Revision\SlotRecord;
+
 /**
  * Upgrade the wiki's AjaxComments data to version 2.0 and restore the articles affected by 1.x
  */
@@ -65,11 +70,16 @@ class UpgradeAjaxComments extends Maintenance {
 						}
 					
 						// and revert it to it's state prior to AjaxComments, or delete it
-						$rev = Revision::newFromId( $title->getLatestRevID() );
-						do { $rev = $rev->getPrevious(); } while( $rev && strpos( $comment = $rev->getRawComment(), 'AjaxComments' ) !== false );
-						if( $rev ) {
-							$this->output( "      Reverting (talkpage $id) to comment " . $rev->getId() . " (Edit comment: '$comment').\n" );
-							$article->doEdit( $rev->getText(), 'Reverted talkpage to state prior to AJAXCOMMENTS additions', EDIT_UPDATE );
+						$revisionLookup = MediaWikiServices::getInstance()->getRevisionLookup();
+						$revisionRecord = $revisionLookup->getRevisionById( $title->getLatestRevID() );
+						do { $revisionRecord = $revisionLookup->getPreviousRevision( $revisionRecord ); } while( $revisionRecord && strpos( $comment = $revisionRecord->getComment( RevisionRecord::RAW ), 'AjaxComments' ) !== false );
+						if( $revisionRecord ) {
+							$this->output( "      Reverting (talkpage $id) to comment " . $revisionRecord->getId() . " (Edit comment: '$comment').\n" );
+
+							$content = $revisionRecord->getContent( SlotRecord::MAIN );
+							$text = ContentHandler::getContentText( $content );
+
+							$article->doEdit( $text, 'Reverted talkpage to state prior to AJAXCOMMENTS additions', EDIT_UPDATE );
 						} else {
 							$this->output( "      Deleting (talkpage $id) as it has only AjaxComments revisions.\n" );
 							$article->doDelete( 'Deleting talkpage, comments data has been moved into the "ajaxcomments" database table.' );
