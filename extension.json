@@ -1,21 +1,45 @@
 {
 	"name": "AjaxComments",
-	"version": "2.9.0, 2020-11-09",
+	"version": "3.0.0-beta",
+	"license-name": "GPL-2.0-or-later",
 	"author": [
-		"[http://www.organicdesign.co.nz/aran Aran Dunkley]",
-		"[http://absorto.dev Igor Absorto]"
+		"[https://organicdesign.nz/User:Nad Aran Dunkley]",
+		"[https://absorto.dev Igor Absorto]",
+		"[https://professional.wiki/en/mediawiki-development Professional Wiki]"
 	],
-	"url": "http://www.mediawiki.org/wiki/Extension:AjaxComments",
+	"url": "https://www.mediawiki.org/wiki/Extension:AjaxComments",
 	"descriptionmsg": "ajaxcomments-desc",
-	"license-name": "[https://www.gnu.org/licenses/gpl-2.0.html GNU General Public Licence 2.0] or later",
 	"type": "other",
+	"requires": {
+		"MediaWiki": ">= 1.39.0",
+		"platform": {
+			"php": ">= 8.0"
+		}
+	},
 	"callback": "AjaxComments::onRegistration",
 	"config": {
-		"AjaxCommentsLikeDislike": false,       "@": "add a like/dislike link to each comment",
-		"AjaxCommentsAvatars": true,            "@": "use the gravatar service for users icons",
-		"AjaxCommentsPollServer": 0,            "@": "poll the server to see if any changes to comments have been made and update if so",
-		"AjaxCommentsEmailNotify": true,        "@": "is set, sends notification of replies and activity on watched pages to users by email",
-		"AjaxCommentsAdmins": ["sysop"],        "@": "list of groups that have admin priviliges for comments"
+		"AjaxCommentsLikeDislike": {
+			"description": "Whether or not to add a like/dislike link to each comment",
+			"value": false
+		},
+		"AjaxCommentsAvatars": {
+			"description": "Whether or not to add avatars for users using the Gravatar service",
+			"value": true
+		},
+		"AjaxCommentsPollServer": {
+			"description": "Defines to poll the server to see if any changes to comments have been made and update if so",
+			"value": 0
+		},
+		"AjaxCommentsEmailNotify": {
+			"description": "Whether or not to send notifications about replies and activity on watched pages to users by email",
+			"value": false
+		},
+		"AjaxCommentsAdmins": {
+			"description": "Defines the user groups that have admin privileges for comments",
+			"value": [
+				"sysop"
+			]
+		}
 	},
 	"Hooks": {
 		"ArticleViewHeader": "AjaxComments::onArticleViewHeader",
@@ -26,13 +50,21 @@
 		"ApiAjaxComments": "AjaxComments.api.php"
 	},
 	"MessagesDirs": {
-		"AjaxComments": ["i18n"]
+		"AjaxComments": [
+			"i18n"
+		]
 	},
 	"ResourceModules": {
 		"ext.ajaxcomments": {
-			"styles": ["styles/ajaxcomments.css"],
-			"scripts": ["modules/ajaxcomments.js"],
-			"dependencies": ["jquery.ui"],
+			"styles": [
+				"styles/ajaxcomments.css"
+			],
+			"scripts": [
+				"modules/ajaxcomments.js"
+			],
+			"dependencies": [
+				"jquery.ui"
+			],
 			"messages": [
 				"ajaxcomments-add",
 				"ajaxcomments-edit",
@@ -59,5 +91,5 @@
 		"localBasePath": "",
 		"remoteExtPath": "AjaxComments"
 	},
-	"manifest_version": 1
+	"manifest_version": 2
 }
