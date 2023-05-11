@@ -179,7 +179,8 @@ class AjaxComments {
 		MediaWikiServices::getInstance()->getHookContainer()->run(
 			'AjaxCommentsChange', [ 'add', $page, $id ]
 		);
-		return self::comment( 'add', $page, $id );
+		self::comment( 'add', $page, $id );
+		return self::getComment( (object)$row );
 	}
 
 	/**
