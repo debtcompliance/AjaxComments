@@ -180,6 +180,8 @@ class AjaxComments {
 			'AjaxCommentsChange', [ 'add', $page, $id ]
 		);
 		self::comment( 'add', $page, $id );
+		
+		$row['ac_id'] = $id;
 		return self::getComment( (object)$row );
 	}
 
@@ -189,7 +191,11 @@ class AjaxComments {
 	public static function edit( $text, $page, $id ) {
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->update( AJAXCOMMENTS_TABLE, [ 'ac_data' => $text ], [ 'ac_id' => $id ] );
-		return self::comment( 'edit', $page, $id );
+		$comment = self::comment( 'edit', $page, $id );
+		if ( $comment ) {
+			return $comment;
+		}
+		return self::getComment( $id );
 	}
 
 	/**
@@ -213,7 +219,11 @@ class AjaxComments {
 		MediaWikiServices::getInstance()->getHookContainer()->run(
 			'AjaxCommentsChange', [ 'reply', $page, $id ]
 		);
-		return self::comment( 'reply', $page, $id );
+		$comment = self::comment( 'reply', $page, $id );
+		if ( $comment ) {
+			return $comment;
+		}
+		return self::getComment( $id );
 	}
 
 	/**
