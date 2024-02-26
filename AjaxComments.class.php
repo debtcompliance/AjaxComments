@@ -90,19 +90,15 @@ class AjaxComments {
 		$out->addModules( [ 'ext.ajaxcomments' ] );
 	}
 
-	/**
+		/**
 	 * Determine if the current user is an admin for comments
 	 */
 	private static function isAdmin() {
 		global $wgAjaxCommentsAdmins;
 
-		if ( self::$admin === null ) {
-			return self::$admin;
-		}
-
 		$user = RequestContext::getMain()->getUser();
-
-		self::$admin = count( array_intersect( $wgAjaxCommentsAdmins, $user->getEffectiveGroups() ) ) > 0;
+		$groups = MediaWikiServices::getInstance()->getUserGroupManager()->getUserEffectiveGroups( $user );
+		self::$admin = count( array_intersect( $wgAjaxCommentsAdmins, $groups ) ) > 0;
 		return self::$admin;
 	}
 
