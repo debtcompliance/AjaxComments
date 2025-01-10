@@ -162,7 +162,7 @@ class AjaxComments {
 	 * Add a new comment to the data structure, return it's insert ID
 	 */
 	public static function add( $text, $page, $user = false ) {
-		$dbw = wfGetDB( DB_MASTER );
+		$dbw = wfGetDB( DB_PRIMARY );
 		$row = [
 			'ac_type' => AJAXCOMMENTS_DATATYPE_COMMENT,
 			'ac_user' => $user ?: RequestContext::getMain()->getUser()->getId(),
@@ -185,7 +185,7 @@ class AjaxComments {
 	 * Edit an existing comment in the data structure
 	 */
 	public static function edit( $text, $page, $id ) {
-		$dbw = wfGetDB( DB_MASTER );
+		$dbw = wfGetDB( DB_PRIMARY );
 		$dbw->update( AJAXCOMMENTS_TABLE, [ 'ac_data' => $text ], [ 'ac_id' => $id ] );
 		$comment = self::comment( 'edit', $page, $id );
 		if ( $comment ) {
@@ -201,7 +201,7 @@ class AjaxComments {
 	public static function reply( $text, $page, $parent ) {
 		$uid = RequestContext::getMain()->getUser()->getId();
 		$ts = time();
-		$dbw = wfGetDB( DB_MASTER );
+		$dbw = wfGetDB( DB_PRIMARY );
 		$row = [
 			'ac_type'   => AJAXCOMMENTS_DATATYPE_COMMENT,
 			'ac_parent' => $parent,
@@ -227,7 +227,7 @@ class AjaxComments {
 	 */
 	public static function delete( $page, $id ) {
 		global $wgAjaxCommentsAdmins;
-		$dbw = wfGetDB( DB_MASTER );
+		$dbw = wfGetDB( DB_PRIMARY );
 
 		// Die if the comment is not owned by this user unless sysop
 		if ( !self::isAdmin() ) {
@@ -251,7 +251,7 @@ class AjaxComments {
 	 * Like/unlike a comment returning a message describing the change
 	 */
 	public static function like( $val, $id ) {
-		$dbw = wfGetDB( DB_MASTER );
+		$dbw = wfGetDB( DB_PRIMARY );
 		$row = $dbw->selectRow( AJAXCOMMENTS_TABLE, 'ac_user', [ 'ac_id' => $id ] );
 
 		$user = RequestContext::getMain()->getUser();
